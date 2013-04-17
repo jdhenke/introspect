@@ -1,0 +1,21 @@
+(load "graph.scm")
+
+(define (assert x #!optional comment)
+  (if (not x)
+      (error `(,comment failed))))
+
+(define g (create-graph))
+(define n1 (add-node g 'jdh-rules!))
+(define n2 (add-node g))
+(define e1 (add-edge n1 n2 'making-connections))
+(pp `(,g ,n1 ,n2 ,e1))
+(pp (get-nodes g))
+(pp (node-incoming-edges n1))
+(pp (node-incoming-edges n2))
+(pp (get-node-data n1))
+(pp (get-edge-data e1))
+(pp (exists-edge? n1 n2))
+(pp (exists-edge? n2 n1))
+
+(remove-node! g n1)
+(pp (get-nodes g))
