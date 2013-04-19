@@ -1,8 +1,5 @@
 (load "graph.scm")
-
-(define (assert x #!optional comment)
-  (if (not x)
-      (error `(,comment failed))))
+(load "utility")
 
 (define g (create-graph))
 (define n1 (add-node g 'jdh-rules!))
