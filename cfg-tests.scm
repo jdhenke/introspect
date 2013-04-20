@@ -27,4 +27,6 @@
 (pp (cfg:get-defines *cfg* 'foo))
 (pp (cfg:get-defines *cfg* 'baz))
 
-;(pp (
+(pp (cfg:get-peers *cfg* 'foo))
+(pp (cfg:get-peers *cfg* 'baz))
+(pp (cfg:get-peers *cfg* 'bar))
