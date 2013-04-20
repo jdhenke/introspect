@@ -1,4 +1,4 @@
-(load "ui")
+(load "cfg")
 (load "utility")
 
 ;;; Unit testing
