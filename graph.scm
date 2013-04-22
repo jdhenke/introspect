@@ -55,6 +55,13 @@
 
 ;;; Read
 
+;;; Returns true if a node exists in graph
+(define (exists-node? g n)
+  (let loop ((nodes (get-nodes g)))
+    (cond ((null? nodes) #f)
+	  ((eq? n (car nodes)) #t)
+	  (else (loop (cdr nodes))))))
+
 ;;; Returns true if an edge exists from `from-node` to `to-node`
 (define (exists-edge? from-node to-node)
   (there-exists? (node-outgoing-edges from-node)
