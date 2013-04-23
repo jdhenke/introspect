@@ -8,6 +8,15 @@
 (load "graph")
 (load "utility")
 
+;;; Define some data types that will be used
+;;; These will be used to:
+;;;  - differentiate between eachother
+;;;  - store additional data for function calls
+;;;    - these are stored as a list of executions
+(define-structure function-def)
+(define-structure function-call executions)
+(define-structure execution inputs output)
+
 ;;; Constants
 ;; edge types
 (define *define-edge* 'defines)
@@ -56,17 +65,17 @@
 	  nodes)))
 
 (define (cfg:add-define-edge f sub-f)
-  (add-edge f sub-f *define-edge*))
+  (add-edge f sub-f (make-function-def)))
 
 (define (cfg:add-call-edge caller callee)
-  (add-edge caller callee *call-edge*))
+  (add-edge caller callee (make-function-call '())))
 
 ;;; Given a function, return the node for the function which defined it.
 (define (cfg:defined-by cfg f)
   (let* ((func (cfg:find-node cfg f))
 	(edges (get-incoming-edges func))
 	(edge (find (lambda (e)
-			     (eq? (get-edge-data e) *define-edge*))
+			     (function-def? (get-edge-data e)))
 			   edges)))
     (assert (not (eq? edge #f)) "should have single incoming edge")
     (edge-src-node edge)))
@@ -76,7 +85,7 @@
   (let* ((func (cfg:find-node cfg f))
 	 (edges (get-outgoing-edges func)))
     (map edge-dest-node
-	 (filter (lambda (e) (eq? (get-edge-data e) *define-edge*))
+	 (filter (lambda (e) (function-def? (get-edge-data e)))
 		 edges))))
 
 ;;; Given a function, find the nodes of all other functions within the same

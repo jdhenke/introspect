@@ -1,5 +1,5 @@
-(load "cfg")
-(load "utility")
+(load "cfg.scm")
+(load "utility.scm")
 
 ;;; Unit testing
 (define *g* (create-cfg))
