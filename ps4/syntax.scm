@@ -45,6 +45,9 @@
       (cadr  defn)
       (caadr defn)))				;;   (DEFINE (foo ...) ...)
 
+;;; TODO - interesting, so it converts function definitions to
+;;; an assignment of a regular variable to a regular lambda.
+;;; we must capture this specific case - the else clause below.
 (define (definition-value defn)
   (if (variable? (cadr defn))			;;   (DEFINE  foo        ...)
       (caddr defn)

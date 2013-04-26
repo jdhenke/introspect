@@ -41,10 +41,11 @@
 
 (defhandler analyze analyze-if if?)
 
-
+;;; TODO - capture call of lambda?
 (define (analyze-lambda exp)
   (let ((vars (lambda-parameters exp))
         (bproc (analyze (lambda-body exp))))
+    ;;; wrap this procedure?
     (lambda (env)
       (make-compound-procedure vars bproc env))))
 
@@ -63,11 +64,15 @@
     (lambda (proc args)
       (error "Unknown procedure type" proc))))
 
+;;; TODO - references to primitive functions should be
+;;; be captured I think. Would we use calls?
 (defhandler execute-application
   apply-primitive-procedure
   strict-primitive-procedure?)
 
+;;; TODO - this references a call to a compound function
 (defhandler execute-application
+  ;;; wrap this lambda?
   (lambda (proc args)
     ((procedure-body proc)
      (extend-environment 
