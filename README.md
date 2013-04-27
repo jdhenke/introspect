@@ -1,4 +1,9 @@
 Introspect
 ==========
 
-Spring 2013 945 Final Project - Scheme Introspector w/ Owen Derby and Dylan Sherry
+### Spring 2013 945 Final Project - Scheme Introspector
+
+## Contributors
+- Owen Derby
+- Joe Henke
+- Dylan Sherry
