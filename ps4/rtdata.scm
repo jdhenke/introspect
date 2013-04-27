@@ -33,7 +33,7 @@
 
 (define (extend-environment variables values base-environment)
   (if (fix:= (length variables) (length values))
-      (vector variables values base-environment)
+      (vector variables values base-environment) ;this is exactly how a new environmetn is created
       (if (fix:< (length variables) (length values))
 	  (error "Too many arguments supplied" variables values)
 	  (error "Too few arguments supplied" variables values))))
@@ -73,7 +73,10 @@
 	       (set-car! vals val))
 	      (else
 	       (scan (cdr vars) (cdr vals)))))))
-
+
+;;; So environments are stored as nested vectors
+;;; at each level, should look something like
+;;;   #(vars vals next-environment-up)
 (define (set-variable-value! var val env)
   (let plp ((env env))
     (if (eq? env the-empty-environment)
