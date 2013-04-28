@@ -2,6 +2,7 @@
 ;;;   Generic analysis, but not prepared for
 ;;;   extension to handle nonstrict operands.
 
+;;; Redefined to return a cell
 (define (eval exp env)
   ((analyze exp) env))
 
@@ -16,24 +17,23 @@
 		    exp))))))
 
 (define (analyze-self-evaluating exp)
-  (lambda (env) (make-cell exp '())))
+  (lambda (env) (default-cell exp)))
 
 (defhandler analyze analyze-self-evaluating self-evaluating?)
 
 
 (define (analyze-quoted exp)
   (let ((qval (text-of-quotation exp)))
-    (lambda (env) (make-cell qval '()))))
+    (lambda (env) (default-cell qval))))
 
 (defhandler analyze analyze-quoted quoted?)
 
 (define (analyze-variable exp)
-  (lambda (env)
-    (get-cell exp env)))
+  (lambda (env) (get-variable-cell exp env)))
 
 (defhandler analyze analyze-variable variable?)
 
-;;; TODO - harder
+;;; JDH TODO - don't want to deal wtih this case right now
 (define (analyze-if exp)
   (let ((pproc (analyze (if-predicate exp)))
         (cproc (analyze (if-consequent exp)))
@@ -42,6 +42,8 @@
       (if (true? (pproc env)) (cproc env) (aproc env)))))
 
 (defhandler analyze analyze-if if?)
+
+;;; JDH TODO - don't want to deal with this case right now
 
 ;;; This captures the definition of a lambda expression
 ;;; NOTE: (define (foo <mumble>) <grumble>) reduces is turned into
@@ -58,7 +60,6 @@
 
 (defhandler analyze analyze-lambda lambda?)
 
-;;; 
 (define (analyze-application exp)
   (let ((fproc (analyze (operator exp)))
         (aprocs (map analyze (operands exp))))
@@ -101,7 +102,8 @@
       args-tags
       (procedure-environment proc))))
   compound-procedure?)
-
+
+;;; JDH TODO - don't feel like doing it right now
 (define (analyze-sequence exps)
   (define (sequentially proc1 proc2)
     (lambda (env) (proc1 env) (proc2 env)))
@@ -124,10 +126,8 @@
   (let ((var (assignment-variable exp))
         (vproc (analyze (assignment-value exp))))
     (lambda (env)
-      (let ((arg-tags (vproc env)))
-	(set-variable-value! var (car arg-tags) env)
-	(set-variable-tags! var (cdr arg-tags) env))
-      'ok)))
+      (set-variable-cell! var (vproc env) env)
+      (default-cell 'ok))))
 
 (defhandler analyze analyze-assignment assignment?)
 
@@ -135,10 +135,8 @@
   (let ((var (definition-variable exp))
         (vproc (analyze (definition-value exp))))
     (lambda (env)
-      (let ((arg-tags (vproc env)))
-	(define-variable! var (car arg-tags) env)
-	(set-variable-tags! var (cdr arg-tags) env))
-      'ok)))
+      (define-variable! var (vproc env) env)
+      (default-cell 'ok))))
 
 (defhandler analyze analyze-definition definition?)
 
@@ -147,25 +145,25 @@
 (defhandler analyze (compose analyze cond->if) cond?)
 
 (defhandler analyze (compose analyze let->combination) let?)
+    
 
-;;; Injecting our special case for inspection
-
-
-;;; Expects a function
-;;; check if is a function
-(define (analyze-tag exp)
-  (lambda (env)
-    (let ((var (tag-var exp))
-	  (tag ((analyze (tag-tag exp)) env)))
-      (add-variable-tag var tag env))
-    (cons 'ok, '()))) ; TODO - fix this cop out
-
-(defhandler analyze analyze-tag tag?)
-
+;;; Special sauce
 (define (analyze-get-tags exp)
-  (lambda (env)
-    (let ((var (tag-var exp)))
-      (cons (get-variable-tags var env) '())))) ;;; TODO - fix this cop out
+  (let ((var (tag-var exp)))
+    (lambda (env)
+      (let ((cell (get-variable-cell var env)))
+	(make-cell (cell-tags cell) (cell-tags cell))))))
+
+(define (analyze-add-tag exp)
+  (let ((var (tag-var exp))
+	(atag (analyze (tag-tag exp))))
+    (lambda (env)
+      (let* ((cell (get-variable-cell var env))
+	     (tags (cell-tags cell))
+	     (tag-cell (atag env))
+	     (tag (cell-value tag-cell)))
+	(set-cell-tags! cell (cons tag tags))
+	(make-cell (cell-tags cell) (cell-tags cell))))))
 
 (defhandler analyze analyze-get-tags get-tags?)
-    
+(defhandler analyze analyze-add-tag add-tag?)
