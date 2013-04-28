@@ -41,8 +41,12 @@
 
 (defhandler analyze analyze-if if?)
 
-;;; TODO - capture call of lambda?
+;;; This captures the definition of a lambda expression
+;;; NOTE: (define (foo <mumble>) <grumble>) reduces is turned into
+;;; (define foo (lambda (<mumble>) <grumble>))
+;;; 
 (define (analyze-lambda exp)
+  (pp "LAMBDA DEFINED!")
   (let ((vars (lambda-parameters exp))
         (bproc (analyze (lambda-body exp))))
     ;;; wrap this procedure?
@@ -108,7 +112,6 @@
 
 (defhandler analyze analyze-assignment assignment?)
 
-
 (define (analyze-definition exp)
   (let ((var (definition-variable exp))
         (vproc (analyze (definition-value exp))))
@@ -123,3 +126,24 @@
 (defhandler analyze (compose analyze cond->if) cond?)
 
 (defhandler analyze (compose analyze let->combination) let?)
+
+;;; Injecting our special case for inspection
+
+
+;;; Expects a function
+;;; check if is a function
+(define (analyze-tag exp)
+  (lambda (env)
+    (let ((var (tag-var exp))
+	  (tag ((analyze (tag-tag exp)) env)))
+      (add-variable-tag var tag env))))
+
+(defhandler analyze analyze-tag tag?)
+
+(define (analyze-get-tags exp)
+  (lambda (env)
+    (let ((var (tag-var exp)))
+      (get-variable-tags var env))))
+
+(defhandler analyze analyze-get-tags get-tags?)
+    

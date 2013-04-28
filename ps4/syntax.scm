@@ -54,7 +54,7 @@
       (cons 'lambda				;;   (DEFINE (foo p...) b...)
             (cons (cdadr defn)			;; = (DEFINE  foo
                   (cddr  defn)))))		;;     (LAMBDA (p...) b...))
-
+
 ;;; LAMBDA expressions
 
 (define (lambda? exp) (tagged-list? exp 'lambda))
@@ -191,3 +191,9 @@
 
 (define (amb-alternatives exp) (cdr exp))
 
+;;; Our syntactic cases
+(define (tag? exp) (tagged-list? exp 'tag))
+(define (get-tags? exp) (tagged-list? exp 'get-tags))
+
+(define (tag-var exp) (cadr exp))
+(define (tag-tag exp) (caddr exp))
