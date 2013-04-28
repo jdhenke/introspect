@@ -6,7 +6,6 @@
 (define (eval exp env)
   ((analyze exp) env))
 
-;;; Modified to return a value and tags
 (define analyze
   (make-generic-operator 1 'analyze
     (lambda (exp)
@@ -48,8 +47,7 @@
 ;;; This captures the definition of a lambda expression
 ;;; NOTE: (define (foo <mumble>) <grumble>) reduces is turned into
 ;;; (define foo (lambda (<mumble>) <grumble>))
-
-;;; TODO - harder
+;;; 
 (define (analyze-lambda exp)
   (pp "LAMBDA DEFINED!")
   (let ((vars (lambda-parameters exp))
@@ -64,42 +62,29 @@
   (let ((fproc (analyze (operator exp)))
         (aprocs (map analyze (operands exp))))
     (lambda (env)
-      (cons
-       (execute-application (fproc env)
+      (execute-application (fproc env)
 	(map (lambda (aproc) (aproc env))
-	     aprocs))
-       'tgif))))
+	     aprocs)))))
 
 (define execute-application
   (make-generic-operator 2 'execute-application
-    (lambda (proc args-tags)
+    (lambda (proc args)
       (error "Unknown procedure type" proc))))
-
-(define (flatten L)
-  (let loop ((output '())
-	     (L L))
-    (if (null? L)
-	output
-	(loop (append output (car L)) (cdr L)))))
 
 ;;; TODO - references to primitive functions should be
 ;;; be captured I think. Would we use calls?
 (defhandler execute-application
-  (lambda (proc args-tags)
-    (let* ((args (map car args-tags))
-	   (answer (apply-primitive-procedure proc args))
-	   (tags (flatten (map cdr args-tags))))
-      (cons answer tags)))
+  apply-primitive-procedure
   strict-primitive-procedure?)
 
 ;;; TODO - this references a call to a compound function
 (defhandler execute-application
   ;;; wrap this lambda?
-  (lambda (proc args-tags)
+  (lambda (proc args)
     ((procedure-body proc)
      (extend-environment 
       (procedure-parameters proc)
-      args-tags
+      args
       (procedure-environment proc))))
   compound-procedure?)
 
@@ -153,6 +138,7 @@
     (lambda (env)
       (let ((cell (get-variable-cell var env)))
 	(make-cell (cell-tags cell) (cell-tags cell))))))
+
 
 (define (analyze-add-tag exp)
   (let ((var (tag-var exp))

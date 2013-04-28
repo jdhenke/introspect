@@ -50,7 +50,6 @@
 
 ;;; An ENVIRONMENT is a chain of FRAMES, made of vectors.
 
-
 (define (extend-environment variables cells base-environment)
   (if (fix:= (length variables) (length cells))
       (vector variables cells base-environment) ;this is exactly how a new environmetn is created
@@ -104,3 +103,4 @@
 	       (set-car! vals cell))
 	      (else
 	       (scan (cdr vars) (cdr vals)))))))
+
