@@ -5,6 +5,7 @@
 (define (eval exp env)
   ((analyze exp) env))
 
+;;; Modified to return a value and tags
 (define analyze
   (make-generic-operator 1 'analyze
     (lambda (exp)
@@ -15,23 +16,24 @@
 		    exp))))))
 
 (define (analyze-self-evaluating exp)
-  (lambda (env) exp))
+  (lambda (env) (make-cell exp '())))
 
 (defhandler analyze analyze-self-evaluating self-evaluating?)
 
 
 (define (analyze-quoted exp)
   (let ((qval (text-of-quotation exp)))
-    (lambda (env) qval)))
+    (lambda (env) (make-cell qval '()))))
 
 (defhandler analyze analyze-quoted quoted?)
 
-
 (define (analyze-variable exp)
-  (lambda (env) (lookup-variable-value exp env)))
+  (lambda (env)
+    (get-cell exp env)))
 
 (defhandler analyze analyze-variable variable?)
-
+
+;;; TODO - harder
 (define (analyze-if exp)
   (let ((pproc (analyze (if-predicate exp)))
         (cproc (analyze (if-consequent exp)))
@@ -44,7 +46,8 @@
 ;;; This captures the definition of a lambda expression
 ;;; NOTE: (define (foo <mumble>) <grumble>) reduces is turned into
 ;;; (define foo (lambda (<mumble>) <grumble>))
-;;; 
+
+;;; TODO - harder
 (define (analyze-lambda exp)
   (pp "LAMBDA DEFINED!")
   (let ((vars (lambda-parameters exp))
@@ -54,34 +57,48 @@
       (make-compound-procedure vars bproc env))))
 
 (defhandler analyze analyze-lambda lambda?)
-
+
+;;; 
 (define (analyze-application exp)
   (let ((fproc (analyze (operator exp)))
         (aprocs (map analyze (operands exp))))
     (lambda (env)
-      (execute-application (fproc env)
+      (cons
+       (execute-application (fproc env)
 	(map (lambda (aproc) (aproc env))
-	     aprocs)))))
+	     aprocs))
+       'tgif))))
 
 (define execute-application
   (make-generic-operator 2 'execute-application
-    (lambda (proc args)
+    (lambda (proc args-tags)
       (error "Unknown procedure type" proc))))
+
+(define (flatten L)
+  (let loop ((output '())
+	     (L L))
+    (if (null? L)
+	output
+	(loop (append output (car L)) (cdr L)))))
 
 ;;; TODO - references to primitive functions should be
 ;;; be captured I think. Would we use calls?
 (defhandler execute-application
-  apply-primitive-procedure
+  (lambda (proc args-tags)
+    (let* ((args (map car args-tags))
+	   (answer (apply-primitive-procedure proc args))
+	   (tags (flatten (map cdr args-tags))))
+      (cons answer tags)))
   strict-primitive-procedure?)
 
 ;;; TODO - this references a call to a compound function
 (defhandler execute-application
   ;;; wrap this lambda?
-  (lambda (proc args)
+  (lambda (proc args-tags)
     ((procedure-body proc)
      (extend-environment 
       (procedure-parameters proc)
-      args
+      args-tags
       (procedure-environment proc))))
   compound-procedure?)
 
@@ -107,7 +124,9 @@
   (let ((var (assignment-variable exp))
         (vproc (analyze (assignment-value exp))))
     (lambda (env)
-      (set-variable-value! var (vproc env) env)
+      (let ((arg-tags (vproc env)))
+	(set-variable-value! var (car arg-tags) env)
+	(set-variable-tags! var (cdr arg-tags) env))
       'ok)))
 
 (defhandler analyze analyze-assignment assignment?)
@@ -116,7 +135,9 @@
   (let ((var (definition-variable exp))
         (vproc (analyze (definition-value exp))))
     (lambda (env)
-      (define-variable! var (vproc env) env)
+      (let ((arg-tags (vproc env)))
+	(define-variable! var (car arg-tags) env)
+	(set-variable-tags! var (cdr arg-tags) env))
       'ok)))
 
 (defhandler analyze analyze-definition definition?)
@@ -136,14 +157,15 @@
   (lambda (env)
     (let ((var (tag-var exp))
 	  (tag ((analyze (tag-tag exp)) env)))
-      (add-variable-tag var tag env))))
+      (add-variable-tag var tag env))
+    (cons 'ok, '()))) ; TODO - fix this cop out
 
 (defhandler analyze analyze-tag tag?)
 
 (define (analyze-get-tags exp)
   (lambda (env)
     (let ((var (tag-var exp)))
-      (get-variable-tags var env))))
+      (cons (get-variable-tags var env) '())))) ;;; TODO - fix this cop out
 
 (defhandler analyze analyze-get-tags get-tags?)
     

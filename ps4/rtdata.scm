@@ -33,7 +33,10 @@
 
 (define (extend-environment variables values base-environment)
   (if (fix:= (length variables) (length values))
-      (vector variables values base-environment) ;this is exactly how a new environmetn is created
+      (vector
+       variables
+       (map (lambda (arg-tag) (make-cell (car arg-tag) `(,(cdr arg-tag)))) values)
+       base-environment) ;this is exactly how a new environment
       (if (fix:< (length variables) (length values))
 	  (error "Too many arguments supplied" variables values)
 	  (error "Too few arguments supplied" variables values))))
@@ -113,10 +116,16 @@
 	      (if (eq? tag (car tags))
 		  #f
 		  (loop (cdr tags)))))
-	(error "No variable cell found when setting tags!" var))))
+	(error "No variable cell found when adding tags!" var))))
 
 (define (get-variable-tags var env)
   (let ((cell (get-cell var env)))
     (if cell
 	(cell-tags cell)
 	(error "No variable cell found when getting tags!" var))))
+
+(define (set-variable-tags var env tags)
+  (let ((cell (get-cell var env)))
+    (if cell
+	(set-cell-tags! cell tags)
+	(error "No variable cell found when setting tags!"))))
