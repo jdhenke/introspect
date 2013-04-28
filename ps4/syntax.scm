@@ -192,7 +192,7 @@
 (define (amb-alternatives exp) (cdr exp))
 
 ;;; Our syntactic cases
-(define (tag? exp) (tagged-list? exp 'tag))
+(define (add-tag? exp) (tagged-list? exp 'add-tag))
 (define (get-tags? exp) (tagged-list? exp 'get-tags))
 
 (define (tag-var exp) (cadr exp))
