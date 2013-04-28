@@ -28,10 +28,10 @@
 (define (strict-primitive-procedure? cell)
   (procedure? (cell-value cell)))
 
-(define (apply-primitive-procedure proc-cell cells)
-  (let* ((proc (cell-value proc-cell))
-	 (value (apply proc (map cell-value cells)))
-	 (tags (map cell-tags cells))) ;;; JDH TODO
+(define (apply-primitive-procedure proc-cell args-cells)
+  (let* ((proc (cell-value proc-cell)) ;;; MIT scheme object
+	 (value (apply proc (map cell-value args-cells))) ;;; mit scheme object
+	 (tags (apply append (map cell-tags args-cells)))) ;;; JDH TODO
       (make-cell value tags)))
 
 
@@ -40,9 +40,14 @@
 (define (make-compound-procedure vars bproc env)
   (vector 'compound-procedure vars bproc env))
 
-(define (compound-procedure? obj)
-  (and (vector? obj)
-       (eq? (vector-ref obj 0) 'compound-procedure)))
+(define (compound-procedure? cell)
+  (let ((obj (cell-value cell)))
+    (vector-compound-procedure? obj)))
+  
+(define (vector-compound-procedure? obj)
+    (and (vector? obj)
+	 (eq? (vector-ref obj 0) 'compound-procedure)))
+
 
 (define (procedure-parameters p) (vector-ref p 1))
 (define (procedure-body p) (vector-ref p 2))

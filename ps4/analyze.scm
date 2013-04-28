@@ -38,7 +38,7 @@
         (cproc (analyze (if-consequent exp)))
         (aproc (analyze (if-alternative exp))))
     (lambda (env)
-      (if (true? (pproc env)) (cproc env) (aproc env)))))
+      (if (true? (cell-value (pproc env))) (cproc env) (aproc env)))))
 
 (defhandler analyze analyze-if if?)
 
@@ -49,44 +49,59 @@
 ;;; (define foo (lambda (<mumble>) <grumble>))
 ;;; 
 (define (analyze-lambda exp)
-  (pp "LAMBDA DEFINED!")
   (let ((vars (lambda-parameters exp))
-        (bproc (analyze (lambda-body exp))))
+        (bproc (analyze (lambda-body exp)))) ;;; result of analyze
     ;;; wrap this procedure?
     (lambda (env)
-      (make-compound-procedure vars bproc env))))
+      (make-cell
+       (make-compound-procedure vars bproc env)
+       '(unknown)))))
 
 (defhandler analyze analyze-lambda lambda?)
 
 (define (analyze-application exp)
-  (let ((fproc (analyze (operator exp)))
-        (aprocs (map analyze (operands exp))))
+  (let ((fproc (analyze (operator exp))) ;;; result of analyze
+        (aprocs (map analyze (operands exp)))) ;;; results of analyze
     (lambda (env)
-      (execute-application (fproc env)
-	(map (lambda (aproc) (aproc env))
-	     aprocs)))))
+      (execute-application
+       (fproc env) ;;; cell of operator
+       (map (lambda (aproc) (aproc env)) aprocs))))) ;;; cells of operands
 
 (define execute-application
   (make-generic-operator 2 'execute-application
-    (lambda (proc args)
-      (error "Unknown procedure type" proc))))
+    (lambda (proc-cell args-cells)
+      (error "Unknown procedure type" proc-cell))))
 
-;;; TODO - references to primitive functions should be
-;;; be captured I think. Would we use calls?
+
+(defhandler execute-application
+  (lambda (proc-cell args-cells)
+    (let* ((proc (cell-value proc-cell))
+	   (body (procedure-body proc))
+	   (vars (procedure-parameters proc))
+	   (proc-env (procedure-environment proc))
+	   (new-env (extend-environment vars args-cells proc-env)))
+      (body new-env)))
+  compound-procedure?)
+
+
 (defhandler execute-application
   apply-primitive-procedure
   strict-primitive-procedure?)
 
+#|
 ;;; TODO - this references a call to a compound function
 (defhandler execute-application
   ;;; wrap this lambda?
-  (lambda (proc args)
+  (lambda (proc-cell args-cells)
     ((procedure-body proc)
      (extend-environment 
       (procedure-parameters proc)
       args
       (procedure-environment proc))))
   compound-procedure?)
+|#
+
+
 
 ;;; JDH TODO - don't feel like doing it right now
 (define (analyze-sequence exps)
@@ -120,8 +135,9 @@
   (let ((var (definition-variable exp))
         (vproc (analyze (definition-value exp))))
     (lambda (env)
-      (define-variable! var (vproc env) env)
-      (default-cell 'ok))))
+      (let ((cell (vproc env)))
+	(define-variable! var cell env)
+	(default-cell 'ok)))))
 
 (defhandler analyze analyze-definition definition?)
 
@@ -134,9 +150,9 @@
 
 ;;; Special sauce
 (define (analyze-get-tags exp)
-  (let ((var (tag-var exp)))
+  (let ((var-exp (tag-var exp)))
     (lambda (env)
-      (let ((cell (get-variable-cell var env)))
+      (let ((cell ((analyze var-exp) env)))
 	(make-cell (cell-tags cell) (cell-tags cell))))))
 
 

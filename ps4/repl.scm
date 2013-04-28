@@ -22,15 +22,15 @@
 
 (defhandler write
   (compose write procedure-printable-representation)
-  compound-procedure?)
+  vector-compound-procedure?)
 
 (defhandler write-line
   (compose write-line procedure-printable-representation)
-  compound-procedure?)
+  vector-compound-procedure?)
 
 (defhandler pp
   (compose pp procedure-printable-representation)
-  compound-procedure?)
+  vector-compound-procedure?)
 
 
 (define (read) (prompt-for-command-expression "eval> "))
