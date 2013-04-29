@@ -2,10 +2,22 @@
 ;;;   Generic analysis, but not prepared for
 ;;;   extension to handle nonstrict operands.
 
-;;; Redefined to return a cell
+;;; EVALUATION
+;;; Takes place in two separate phases:
+;;;   1) analyze compiles the expression into a combinator
+;;;   2) run the combinator with the given environment to yield the answer cell
+;;;
+;;;   exp - raw expression read in
+;;;   env - environment in which to execute this
+;;;   returns - cell of answer
 (define (eval exp env)
   ((analyze exp) env))
 
+;;; ANALYZE
+;;; A function which, when given an expression returns a combinator
+;;; A combinator is a function which given and environment produces
+;;; The result of evaluating the expression in the environment
+;;; Returns the cell of the answer
 (define analyze
   (make-generic-operator 1 'analyze
     (lambda (exp)
@@ -38,40 +50,30 @@
         (cproc (analyze (if-consequent exp)))
         (aproc (analyze (if-alternative exp))))
     (lambda (env)
-      (if (true? (cell-value (pproc env))) (cproc env) (aproc env)))))
+      (if (true? (pproc env)) (cproc env) (aproc env)))))
 
 (defhandler analyze analyze-if if?)
 
-;;; JDH TODO - don't want to deal with this case right now
-
-;;; This captures the definition of a lambda expression
-;;; NOTE: (define (foo <mumble>) <grumble>) reduces is turned into
-;;; (define foo (lambda (<mumble>) <grumble>))
-;;; 
 (define (analyze-lambda exp)
   (let ((vars (lambda-parameters exp))
-        (bproc (analyze (lambda-body exp)))) ;;; result of analyze
-    ;;; wrap this procedure?
+        (bproc (analyze (lambda-body exp))))
     (lambda (env)
-      (make-cell
-       (make-compound-procedure vars bproc env)
-       '(unknown)))))
+      (default-cell (make-compound-procedure vars bproc env)))))
 
 (defhandler analyze analyze-lambda lambda?)
 
 (define (analyze-application exp)
-  (let ((fproc (analyze (operator exp))) ;;; result of analyze
-        (aprocs (map analyze (operands exp)))) ;;; results of analyze
+  (let ((fproc (analyze (operator exp)))
+        (aprocs (map analyze (operands exp))))
     (lambda (env)
       (execute-application
-       (fproc env) ;;; cell of operator
-       (map (lambda (aproc) (aproc env)) aprocs))))) ;;; cells of operands
+       (fproc env)
+       (map (lambda (aproc) (aproc env)) aprocs)))))
 
 (define execute-application
   (make-generic-operator 2 'execute-application
     (lambda (proc-cell args-cells)
       (error "Unknown procedure type" proc-cell))))
-
 
 (defhandler execute-application
   (lambda (proc-cell args-cells)
@@ -83,27 +85,10 @@
       (body new-env)))
   compound-procedure?)
 
-
 (defhandler execute-application
   apply-primitive-procedure
   strict-primitive-procedure?)
 
-#|
-;;; TODO - this references a call to a compound function
-(defhandler execute-application
-  ;;; wrap this lambda?
-  (lambda (proc-cell args-cells)
-    ((procedure-body proc)
-     (extend-environment 
-      (procedure-parameters proc)
-      args
-      (procedure-environment proc))))
-  compound-procedure?)
-|#
-
-
-
-;;; JDH TODO - don't feel like doing it right now
 (define (analyze-sequence exps)
   (define (sequentially proc1 proc2)
     (lambda (env) (proc1 env) (proc2 env)))
@@ -126,8 +111,9 @@
   (let ((var (assignment-variable exp))
         (vproc (analyze (assignment-value exp))))
     (lambda (env)
-      (set-variable-cell! var (vproc env) env)
-      (default-cell 'ok))))
+      (let ((cell (vproc env)))
+	(set-variable-cell! var cell env)
+	(default-cell 'ok)))))
 
 (defhandler analyze analyze-assignment assignment?)
 
@@ -140,13 +126,12 @@
 	(default-cell 'ok)))))
 
 (defhandler analyze analyze-definition definition?)
-
+
 ;;; Macros (definitions are in syntax.scm)
 
 (defhandler analyze (compose analyze cond->if) cond?)
 
 (defhandler analyze (compose analyze let->combination) let?)
-    
 
 ;;; Special sauce
 (define (analyze-get-tags exp)
@@ -155,7 +140,7 @@
       (let ((cell ((analyze var-exp) env)))
 	(make-cell (cell-tags cell) (cell-tags cell))))))
 
-
+#|
 (define (analyze-add-tag exp)
   (let ((var (tag-var exp))
 	(atag (analyze (tag-tag exp))))
@@ -166,6 +151,24 @@
 	     (tag (cell-value tag-cell)))
 	(set-cell-tags! cell (cons tag tags))
 	(make-cell (cell-tags cell) (cell-tags cell))))))
+|#
+
+(define (analyze-add-tag exp)
+  (let ((aobj (analyze (tag-var exp)))
+	(atag (analyze (tag-tag exp))))
+    (lambda (env)
+      (let* ((cell (aobj env))
+	     (tags (cell-tags cell))
+	     (tag-cell (atag env))
+	     (tag (cell-value tag-cell)))
+	(let loop ((tags-left tags))
+	  (if (null? tags-left)
+	      (begin
+		(set-cell-tags! cell (cons tag tags))
+		cell)
+	      (if (eq? tag (car tags-left))
+		  cell
+		  (loop (cdr tags-left)))))))))
 
 (defhandler analyze analyze-get-tags get-tags?)
 (defhandler analyze analyze-add-tag add-tag?)

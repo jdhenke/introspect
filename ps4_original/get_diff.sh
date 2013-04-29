@@ -1,2 +1,2 @@
 #!/bin/sh
-for file in *; do diff $file ../ps4/$file; done
+for file in *.scm; do diff $file ../ps4/$file; done
