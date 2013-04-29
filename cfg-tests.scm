@@ -3,7 +3,7 @@
 
 ;;; Unit testing
 (define *g* (create-cfg))
-(assert (graph? *g*))
+(assert (cfg? *g*))
 
 ;;; simple example program
 ;;;

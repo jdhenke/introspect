@@ -28,6 +28,7 @@
 		      ;global/source nodes into a peer-group
 (define *global* 'global)
 (define *normal* 'non-global)
+(define *undefined* 'undefined)
 
 ;;; We associate a description list with each node in our cfg. These descriptors
 ;;; indicate which type the function is (global or not) and the name associated
@@ -48,24 +49,42 @@
   (and (list? desc) (= (length desc) 3) (eq? (car desc) *desc*)))
 (define (cfg:global-node? node)
   (eq? (cfg:node-type node) *global*))
+(define (cfg? cfg)
+  (and (pair? cfg) (graph? (cfg:get-graph cfg)) (node? (cfg:get-root cfg))))
+
 
 ;;; cfg (private) helper procedures
 
-;;; add 'function' of given 'type' to the give 'cfg'
+;;; add 'function' of given 'type' to the given 'cfg'
 (define (cfg:add-function cfg type function)
-  (assert (graph? cfg) "can only operate on graph objects!")
+  (assert (cfg? cfg) "can only operate on graph objects!")
   ;; TODO? (assert (not (exists-node? cfg f)) "function already exists")
-  (add-node cfg (cfg:make-descriptor type function)))
+  (add-node (cfg:get-graph cfg) (cfg:make-descriptor type function)))
+
+;;; add an undefined function 'function' to the given 'cfg'
+(define (cfg:add-undefined-function cfg function)
+  (cfg:add-function cfg *undefined* function))
 
 ;;; given a cfg and function, find corresponding node
 (define (cfg:find-node cfg f)
-  (let ((nodes (get-nodes cfg)))
+  (let ((nodes (get-nodes (cfg:get-graph cfg))))
     (find (lambda (n)
 	    (eq? (cfg:node-name n) f))
 	  nodes)))
 
+(define (cfg:get-graph cfg)
+  (car cfg))
+(define (cfg:get-root cfg)
+  (cadr cfg))
+
 (define (cfg:add-define-edge f sub-f)
-  (add-edge f sub-f (make-function-def)))
+  (let*  ((edges (get-incoming-edges sub-f))
+	 (edge (find (lambda (e)
+		       (function-def? (get-edge-data e)))
+		     edges)))
+    (assert (eq? edge #f) `(,sub-f " has already been defined"))
+
+    (add-edge f sub-f (make-function-def))))
 
 (define (cfg:add-call-edge caller callee)
   (add-edge caller callee (make-function-call '())))
@@ -104,16 +123,15 @@
   (let ((cfg (create-graph)))
     ;;; We employ the use of a dummy root node to make our cfg a well-defined
     ;;; tree.
-    (cfg:add-function cfg *root* *root*)
-    cfg))
+    (let ((root (add-node cfg (cfg:make-descriptor *root* *root*))))
+      (list cfg root))))
 
 ;;; Functions are declared in one of two types of scopes: At the top level
 ;;; (global scope), or within the scope of another function. We need to handle
 ;;; these two cases separately.
 
-;;; given a cfg object and a function name defined at the top level (not
-;;; called by anyone), add the function to the cfg as a source node. Return the
-;;; newly created node.
+;;; given a cfg object and a function name defined at the top level, add the
+;;; function to the cfg as a source node. Return the newly created node.
 (define (define-global-func cfg f)
   (let ((root (cfg:find-node cfg *root*))
 	(func (cfg:add-function cfg *global* f)))
@@ -140,5 +158,6 @@
   (let ((cr-f (cfg:find-node cfg caller))
 	(ce-f (cfg:find-node cfg callee)))
     (assert (not (eq? cr-f #f)) "caller not in cfg")
-    (assert (not (eq? ce-f #f)) "callee not in cfg")
+    (if (eq? ce-f #f) ; callee not defined, add place holder
+	(set! ce-f (cfg:add-undefined-function cfg callee)))
     (cfg:add-call-edge cr-f ce-f)))
