@@ -1,6 +1,6 @@
 ;;; graph.scm - our directed graph sub-system used to store data
 
-;;; JDH - a main goal is to separate external interface 
+;;; JDH - a main goal is to separate external interface
 ;;;       from internal implementation details.
 ;;;       Therefore: objects created with this API should only be operated on
 ;;;                  by functions within this API
@@ -23,7 +23,7 @@
 (define (node-add-outgoing-edge node edge)
   ; TODO: check for double adding edge? these should be sets. implement sets?
   (set-node-outgoing-edges! node (append (node-outgoing-edges node) `(,edge))))
-  
+
 
 ;;; Organized by CRUD operations
 
@@ -35,7 +35,7 @@
 
 ;;; Adds a new node to the graph
 ;;; Returns the newly created node
-;;; Can optionally specify an arbitrary data object 
+;;; Can optionally specify an arbitrary data object
 ;;; to be attached to this node
 (define (add-node graph #!optional node-data)
   (let ((node (make-node '() '() node-data)))
@@ -65,7 +65,7 @@
 ;;; Returns true if an edge exists from `from-node` to `to-node`
 (define (exists-edge? from-node to-node)
   (there-exists? (node-outgoing-edges from-node)
-	    (lambda (n) 
+	    (lambda (n)
 	      (eq? (edge-dest-node n) to-node))))
 
 ;;; Gets the data object attached to `node`
@@ -92,13 +92,7 @@
 
 ;;; Update
 
-;;; Sets's node's data
-(define (set-node-data! node data)
-  (set-node-data node data))
-
-;;; Sets edge's data
-(define (set-edge-data! edge data)
-  (set-edge-data edge data))
+;;; set-node-data! and set-edge-data! are automagically created by scheme!
 
 ;;; Delete
 
@@ -124,4 +118,3 @@
 	(dest-node (edge-dest-node edge)))
     (set-node-outgoing-edges! src-node (delq edge (node-outgoing-edges src-node)))
     (set-node-incoming-edges! dest-node (delq edge (node-incoming-edges dest-node)))))
-

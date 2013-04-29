@@ -30,3 +30,11 @@
 (pp (cfg:get-peers *cfg* 'foo))
 (pp (cfg:get-peers *cfg* 'baz))
 (pp (cfg:get-peers *cfg* 'bar))
+
+;;; simple example of adding a call before it's defined
+(define *cfg* (create-cfg))
+(define-global-func *cfg* 'foo)
+(define-sub-function *cfg* 'foo 'bar)
+(add-function-call *cfg* 'foo 'bar)
+(add-function-call *cfg* 'bar 'baz)
+(define-global-func *cfg* 'baz)

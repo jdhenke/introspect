@@ -58,12 +58,18 @@
 ;;; add 'function' of given 'type' to the given 'cfg'
 (define (cfg:add-function cfg type function)
   (assert (cfg? cfg) "can only operate on graph objects!")
-  ;; TODO? (assert (not (exists-node? cfg f)) "function already exists")
-  (add-node (cfg:get-graph cfg) (cfg:make-descriptor type function)))
+  (let ((func (cfg:find-node cfg function)))
+    (if (eq? func #f)
+	(add-node (cfg:get-graph cfg) (cfg:make-descriptor type function))
+	(let ((ntype (cfg:node-type func)))
+	  (if (eq? ntype *undefined*)
+	      (begin (set-node-data! func (cfg:make-descriptor type function))
+		     func)
+	      (error "attempting to redefine existing function - not implemented yet!"))))))
 
 ;;; add an undefined function 'function' to the given 'cfg'
 (define (cfg:add-undefined-function cfg function)
-  (cfg:add-function cfg *undefined* function))
+  (add-node (cfg:get-graph cfg) (cfg:make-descriptor *undefined* function)))
 
 ;;; given a cfg and function, find corresponding node
 (define (cfg:find-node cfg f)
