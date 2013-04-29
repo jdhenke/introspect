@@ -65,7 +65,6 @@
 (define (procedure-environment p) (vector-ref p 3))
 
 ;;; An ENVIRONMENT is a chain of FRAMES, made of vectors.
-;;; TODO? - Create better abstraction of an environment?
 
 (define (extend-environment variables cells base-environment)
   (if (fix:= (length variables) (length cells))
@@ -109,11 +108,10 @@
   (let ((cell (get-cell var env)))
     (if cell
 	cell
-	(default-cell (lookup-scheme-value var))))) ;;; JDH TODO FIX
+	(default-cell (lookup-scheme-value var)))))
 
 ;;; Uses get-variable-cell to find cell, if it exists.
 ;;; If found, replaces cell contents with given ones
-;;; TODO? - create set-cell as its own function?
 (define (set-variable-cell! var cell env)
   (let ((current-cell (get-variable-cell var env)))
     (set-cell-value! current-cell (cell-value cell))

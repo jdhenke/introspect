@@ -44,7 +44,6 @@
 
 (defhandler analyze analyze-variable variable?)
 
-;;; JDH TODO - don't want to deal wtih this case right now
 (define (analyze-if exp)
   (let ((pproc (analyze (if-predicate exp)))
         (cproc (analyze (if-consequent exp)))
@@ -133,25 +132,12 @@
 
 (defhandler analyze (compose analyze let->combination) let?)
 
-;;; Special sauce
+;;; Special forms to get tags
 (define (analyze-get-tags exp)
   (let ((var-exp (tag-var exp)))
     (lambda (env)
       (let ((cell ((analyze var-exp) env)))
 	(make-cell (cell-tags cell) (cell-tags cell))))))
-
-#|
-(define (analyze-add-tag exp)
-  (let ((var (tag-var exp))
-	(atag (analyze (tag-tag exp))))
-    (lambda (env)
-      (let* ((cell (get-variable-cell var env))
-	     (tags (cell-tags cell))
-	     (tag-cell (atag env))
-	     (tag (cell-value tag-cell)))
-	(set-cell-tags! cell (cons tag tags))
-	(make-cell (cell-tags cell) (cell-tags cell))))))
-|#
 
 (define (analyze-add-tag exp)
   (let ((aobj (analyze (tag-var exp)))
