@@ -127,7 +127,12 @@
   (let ((cell (get-cell var env)))
     (if cell
 	cell
-	(default-cell (lookup-scheme-value var)))))
+	(let ((new-cell (default-cell (lookup-scheme-value var))))
+	  (let loop ((env env))
+	    (if (eq? (environment-parent env) the-empty-environment)
+		 (define-variable! var new-cell env)
+		 (loop (environment-parent env))))
+	  new-cell))))
 
 ;;; Uses get-variable-cell to find cell, if it exists.
 ;;; If found, replaces cell contents with given ones
