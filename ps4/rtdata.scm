@@ -117,6 +117,21 @@
     (set-cell-value! current-cell (cell-value cell))
     (set-cell-tags! current-cell (cell-tags cell))))
 
+;;; Ensure tag is added iff. is not already present
+(define (add-cell-tag! cell tag)
+  (let loop ((tags (cell-tags cell)))
+    (if (null? tags)
+	(set-cell-tags! cell (cons tag (cell-tags cell)))
+	(if (not (eq? tag (car tags)))
+	    (loop (cdr tags)))))
+  cell)
+
+(define (add-cell-tags! cell tags)
+  (pp tags)
+  (for-each (lambda (tag) (add-cell-tag! cell tag)) tags)
+  cell)
+	    
+
 ;;; Extension to make underlying Scheme values available to interpreter
 
 (define (lookup-scheme-value var)

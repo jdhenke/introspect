@@ -45,8 +45,10 @@
 (define (repl)
   (if (eq? the-global-environment 'not-initialized)
 	  (error "Interpreter not initialized. Run (init) first."))
-  (let ((input (read)))
-    (write-line (cell-value (eval input the-global-environment)))
+  (let* ((input (read))
+	 (cell (eval input the-global-environment)))
+    (pp cell)
+    (write-line (cell-value cell))
     (repl)))
 
 (define go repl)

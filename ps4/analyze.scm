@@ -77,11 +77,18 @@
 (defhandler execute-application
   (lambda (proc-cell args-cells)
     (let* ((proc (cell-value proc-cell))
-	   (body (procedure-body proc))
 	   (vars (procedure-parameters proc))
-	   (proc-env (procedure-environment proc))
-	   (new-env (extend-environment vars args-cells proc-env)))
-      (body new-env)))
+	   (body (procedure-body proc))
+	   (proc-env (procedure-environment proc)))
+      (if (list? vars)
+	  (let ((new-env (extend-environment vars args-cells proc-env)))
+	    (body new-env))
+	  (let* ((new-vars (list vars))
+		 (new-cell (add-cell-tags! (default-cell (map cell-value args-cells))
+					   (apply append (map cell-tags args-cells))))
+		 (new-args-cells (list new-cell))
+		 (new-env (extend-environment new-vars new-args-cells proc-env)))
+	    (body new-env)))))
   compound-procedure?)
 
 (defhandler execute-application
@@ -144,17 +151,9 @@
 	(atag (analyze (tag-tag exp))))
     (lambda (env)
       (let* ((cell (aobj env))
-	     (tags (cell-tags cell))
 	     (tag-cell (atag env))
 	     (tag (cell-value tag-cell)))
-	(let loop ((tags-left tags))
-	  (if (null? tags-left)
-	      (begin
-		(set-cell-tags! cell (cons tag tags))
-		cell)
-	      (if (eq? tag (car tags-left))
-		  cell
-		  (loop (cdr tags-left)))))))))
+	(add-cell-tag! cell tag)))))
 
 (defhandler analyze analyze-get-tags get-tags?)
 (defhandler analyze analyze-add-tag add-tag?)
