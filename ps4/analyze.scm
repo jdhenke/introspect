@@ -65,9 +65,12 @@
   (let ((fproc (analyze (operator exp)))
         (aprocs (map analyze (operands exp))))
     (lambda (env)
-      (execute-application
-       (fproc env)
-       (map (lambda (aproc) (aproc env)) aprocs)))))
+      (let ((proc-cell (fproc env)))
+	(add-cell-tags!
+	 (execute-application
+	  proc-cell
+	  (map (lambda (aproc) (aproc env)) aprocs))
+	 (cell-tags proc-cell))))))
 
 (define execute-application
   (make-generic-operator 2 'execute-application
