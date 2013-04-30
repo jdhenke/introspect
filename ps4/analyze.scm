@@ -56,6 +56,7 @@
 (define (analyze-lambda exp)
   (let ((vars (lambda-parameters exp))
         (bproc (analyze (lambda-body exp))))
+    (pp vars)
     (lambda (env)
       (default-cell (make-compound-procedure vars bproc env)))))
 
@@ -83,15 +84,8 @@
 	   (vars (procedure-parameters proc))
 	   (body (procedure-body proc))
 	   (proc-env (procedure-environment proc)))
-      (if (list? vars)
-	  (let ((new-env (extend-environment vars args-cells proc-env)))
-	    (body new-env))
-	  (let* ((new-vars (list vars))
-		 (new-cell (add-cell-tags! (default-cell (map cell-value args-cells))
-					   (apply append (map cell-tags args-cells))))
-		 (new-args-cells (list new-cell))
-		 (new-env (extend-environment new-vars new-args-cells proc-env)))
-	    (body new-env)))))
+      (let ((new-env (extend-environment vars args-cells proc-env)))
+	    (body new-env))))
   compound-procedure?)
 
 (defhandler execute-application

@@ -67,6 +67,25 @@
 ;;; An ENVIRONMENT is a chain of FRAMES, made of vectors.
 
 (define (extend-environment variables cells base-environment)
+  (if (list? variables)
+      (inner-extend-environment variables cells base-environment)
+      (let loop ((vars variables)
+		 (cells cells)
+		 (out-vars '())
+		 (out-cells '()))
+	(if (pair? vars)
+	    (loop (cdr vars)
+		  (cdr cells)
+		  (cons (car vars) out-vars)
+		  (cons (car cells) out-cells))
+	    ;;; case where vars is actually a variable
+	    (let* ((new-vars (cons vars out-vars))
+		   (new-cell (add-cell-tags! (default-cell (map cell-value cells))
+					     (apply append (map cell-tags cells))))
+		   (new-args-cells (cons new-cell out-cells)))
+	      (inner-extend-environment new-vars new-args-cells base-environment))))))
+
+(define (inner-extend-environment variables cells base-environment)
   (if (fix:= (length variables) (length cells))
       (vector variables cells base-environment)
       (if (fix:< (length variables) (length cells))
