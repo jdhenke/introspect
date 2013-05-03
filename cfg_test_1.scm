@@ -18,7 +18,7 @@
   (add-function-call *g* parent 'foo))
 
 ;;;(define (buzz)
-;;;  (foo)
+;;;  (foo) ;; this causes error "premature reference"...wtf?
 ;;;  (define (foo)
 ;;;    12)
 ;;;  (foo))

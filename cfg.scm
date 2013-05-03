@@ -49,16 +49,19 @@
   (and (list? desc) (= (length desc) 3) (eq? (car desc) *desc*)))
 (define (cfg:global-node? node)
   (eq? (cfg:node-type node) *global*))
+(define (cfg:root-node? node)
+  (eq? (cfg:node-type node) *root*))
 (define (cfg? cfg)
   (and (pair? cfg) (graph? (cfg:get-graph cfg)) (node? (cfg:get-root cfg))))
 
 
 ;;; cfg (private) helper procedures
 
-;;; add 'function' of given 'type' to the given 'cfg'
-(define (cfg:add-function cfg type function)
-  (assert (cfg? cfg) "can only operate on graph objects!")
-  (let ((func (cfg:find-node cfg function)))
+;;; add 'function' of given 'type', with reference to current scope defined by
+;;; p-node in the given 'cfg'
+(define (cfg:add-function cfg p-node type function)
+  (assert (node? p-node) "need a node object")
+  (let ((func (cfg:find-node p-node function)))
     (if (eq? func #f)
 	(add-node (cfg:get-graph cfg) (cfg:make-descriptor type function))
 	(let ((ntype (cfg:node-type func)))
@@ -71,19 +74,14 @@
 (define (cfg:add-undefined-function cfg function)
   (add-node (cfg:get-graph cfg) (cfg:make-descriptor *undefined* function)))
 
-;;; given a cfg and function, find corresponding node
-(define (cfg:find-node cfg f)
-  (let ((nodes (get-nodes (cfg:get-graph cfg))))
-    (find (lambda (n)
-	    (eq? (cfg:node-name n) f))
-	  nodes)))
-
 (define (cfg:get-graph cfg)
   (car cfg))
 (define (cfg:get-root cfg)
   (cadr cfg))
 
 (define (cfg:add-define-edge f sub-f)
+  (assert (node? f) "need a node object")
+  (assert (node? sub-f) "need a node object")
   (let*  ((edges (get-incoming-edges sub-f))
 	 (edge (find (lambda (e)
 		       (function-def? (get-edge-data e)))
@@ -93,34 +91,52 @@
     (add-edge f sub-f (make-function-def))))
 
 (define (cfg:add-call-edge caller callee)
+  (assert (node? caller) "need a node object")
+  (assert (node? callee) "need a node object")
   (add-edge caller callee (make-function-call '())))
 
-;;; Given a function, return the node for the function which defined it.
-(define (cfg:defined-by cfg f)
-  (let* ((func (cfg:find-node cfg f))
-	(edges (get-incoming-edges func))
-	(edge (find (lambda (e)
-			     (function-def? (get-edge-data e)))
-			   edges)))
+;;; Given a function node, return the node for the function which defined it.
+(define (cfg:defined-by func)
+  (assert (node? func) "need a node object")
+  (let* ((edges (get-incoming-edges func))
+	 (edge (find (lambda (e)
+		       (function-def? (get-edge-data e)))
+		     edges)))
     (assert (not (eq? edge #f)) "should have single incoming edge")
     (edge-src-node edge)))
 
-;;; Given a function name, return the node of every function it defines.
-(define (cfg:get-defines cfg f)
-  (let* ((func (cfg:find-node cfg f))
-	 (edges (get-outgoing-edges func)))
+;;; Given a function node, return the node of every function it defines.
+(define (cfg:get-defines func)
+  (assert (node? func) "need a node object")
+  (let ((edges (get-outgoing-edges func)))
     (map edge-dest-node
 	 (filter (lambda (e) (function-def? (get-edge-data e)))
 		 edges))))
 
-;;; Given a function, find the nodes of all other functions within the same
+;;; Given a function node, find the nodes of all other functions within the same
 ;;; namespace.
-(define (cfg:get-peers cfg f)
-  (let* ((func (cfg:find-node cfg f))
-	(parent (cfg:defined-by cfg f))
-	(peers (cfg:get-defines cfg (cfg:node-name parent))))
+(define (cfg:get-peers func)
+  (assert (node? func) "need a node object")
+  (let* ((parent (cfg:defined-by func))
+	 (peers (cfg:get-defines parent)))
     (filter (lambda (p) (not (eq? p func))) peers)))
 
+
+;;; given a node defining the local scope and a function name, find
+;;; appropriate node, recursively looking upward through scopes
+(define (cfg:find-node p-node f)
+  (define (filter-for-node nodes)
+    (find (lambda (n)
+	    (eq? (cfg:node-name n) f))
+	  nodes))
+  ;; if global scope
+  (let lp ((peers (cfg:get-defines p-node))
+	   (parent p-node))
+    (let ((func (filter-for-node peers)))
+      (cond ((cfg:root-node? parent) func)
+	    ((not (eq? func #f)) func)
+	    (else (let ((parent-parent (cfg:defined-by parent)))
+		    (lp (cfg:get-defines parent-parent) parent-parent)))))))
 
 ;;; cfg public/functions. Everything you need to construct a proper cfg!!
 
@@ -139,8 +155,8 @@
 ;;; given a cfg object and a function name defined at the top level, add the
 ;;; function to the cfg as a source node. Return the newly created node.
 (define (define-global-func cfg f)
-  (let ((root (cfg:find-node cfg *root*))
-	(func (cfg:add-function cfg *global* f)))
+  (let* ((root (cfg:get-root cfg))
+	(func (cfg:add-function cfg root *global* f)))
     (cfg:add-define-edge root func)
     func))
 
@@ -149,9 +165,8 @@
 ;;; sub-function 'sub-f' to the 'cfg' and add a directed edge from 'parent' to
 ;;; 'sub-f'. Return the node of the sub-function.
 (define (define-sub-function cfg parent sub-f)
-  (let ((p-f (cfg:find-node cfg parent))
-	(sub-f (cfg:add-function cfg *normal* sub-f)))
-    (cfg:add-define-edge p-f sub-f)
+  (let ((sub-f (cfg:add-function cfg parent *normal* sub-f)))
+    (cfg:add-define-edge parent sub-f)
     sub-f))
 
 ;;; We also care about functions which call other functions, so we add a
@@ -161,9 +176,7 @@
 ;;; Given the cfg, calling function and the called function, add a directed edge
 ;;; from caller to callee.
 (define (add-function-call cfg caller callee)
-  (let ((cr-f (cfg:find-node cfg caller))
-	(ce-f (cfg:find-node cfg callee)))
-    (assert (not (eq? cr-f #f)) "caller not in cfg")
+  (let ((ce-f (cfg:find-node caller callee)))
     (if (eq? ce-f #f) ; callee not defined, add place holder
 	(set! ce-f (cfg:add-undefined-function cfg callee)))
-    (cfg:add-call-edge cr-f ce-f)))
+    (cfg:add-call-edge caller ce-f)))
