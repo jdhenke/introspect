@@ -17,8 +17,12 @@
 (define *baz (define-global-func *cfg* 'baz))
 (define *foo (define-global-func *cfg* 'foo))
 (define *bar (define-sub-function *cfg* *foo 'bar))
-(add-function-call *cfg* *bar 'baz)
-(add-function-call *cfg* *foo 'bar)
+(define bar->baz (add-function-call *cfg* *bar 'baz))
+(define foo->bar (add-function-call *cfg* *foo 'bar))
+(add-execution foo->bar '() '())
+(add-execution bar->baz '() '())
+(add-execution bar->baz '() '())
+
 
 (assert (eq? (cfg:defined-by *baz) (cfg:get-root *cfg*)) "baz not in global scope")
 (assert (eq? (cfg:defined-by *foo) (cfg:get-root *cfg*)) "foo not in global scope")
@@ -31,6 +35,10 @@
 (assert (equal? (cfg:get-peers *foo) `(,*baz)) "baz isn't foo's peer")
 (assert (equal? (cfg:get-peers *baz) `(,*foo)) "foo isn't baz's peer")
 (assert (null? (cfg:get-peers *bar)) "bar has peer")
+
+(assert (= (length (get-executions foo->bar)) 1))
+(assert (= (length (get-executions bar->baz)) 2))
+
 
 ;;; simple example of adding a call before it's defined
 (define *cfg* (create-cfg))

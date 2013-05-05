@@ -18,9 +18,6 @@
 (define-structure execution inputs output)
 
 ;;; Constants
-;; edge types
-(define *define-edge* 'defines)
-(define *call-edge* 'calls)
 ;; descriptor type indicator
 (define *desc* '*desc*)
 ;; function types
@@ -138,6 +135,15 @@
 	    (else (let ((parent-parent (cfg:defined-by parent)))
 		    (lp (cfg:get-defines parent-parent) parent-parent)))))))
 
+(define (cfg:add-execution edge exec)
+  (assert (edge? edge))
+  (assert (execution? exec))
+  (let ((fc (get-edge-data edge)))
+    (assert (function-call? fc))
+    (set-function-call-executions!
+     fc
+     (append (function-call-executions fc) `(,exec)))))
+
 ;;; cfg public/functions. Everything you need to construct a proper cfg!!
 
 ;;; Create a cfg object and return it.
@@ -180,3 +186,12 @@
     (if (eq? ce-f #f) ; callee not defined, add place holder
 	(set! ce-f (cfg:add-undefined-function cfg callee)))
     (cfg:add-call-edge caller ce-f)))
+
+;;;
+(define (add-execution edge inputs outputs)
+  (let ((exec (make-execution inputs outputs)))
+    (cfg:add-execution edge exec)
+    exec))
+
+(define (get-executions edge)
+  (function-call-executions (get-edge-data edge)))
