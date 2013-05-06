@@ -21,7 +21,7 @@
 ;;;   env - environment in which to execute this
 ;;;   returns - cell of answer
 (define (eval exp env)
-  ((analyze exp) env))
+  ((analyze exp rootnode) env))
 
 ;;; ANALYZE
 ;;; A function which, when given an expression returns a combinator
@@ -75,6 +75,10 @@
     (analyze exp parent-node))
   (let ((destination-name (string (operator exp))))
     ;; add a call edge
+    (pp "Adding edge to/from")
+    (pp exp)
+    (pp parent-node)
+    (pp (string (operator exp)))
     (add-function-call *g* parent-node destination-name)
     (let ((fproc (analyze (operator exp) parent-node))
 	  (aprocs (map analyze-tmp (operands exp))))
