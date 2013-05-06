@@ -80,7 +80,8 @@
   (begin
     (pp "bgi-lambda")
     (pp code)
-    (pp parent-node)))
+    (pp parent-node)
+    (bgi (lambda-body code) parent-node)))
 (defhandler bgi bgi-lambda lambda? any?)
 
 (define (bgi-application code parent-node)
@@ -93,11 +94,18 @@
     ;; TODO doublecheck (string (operator code)) is
     ;; really the correct name of the function
     ;; TODO create node first? Or check for prior existence?
-    (add-function-call *g* parent-node (string (operator code)))
-    (bgi (operator code))
-    (define (bgi-tmp code)
-      (bgi code parent-node))
-    (map bgi-tmp (operands code))))
+    (let* ((destination-name (string (operator code)))
+	   (destination-node (cfg:find-node parent-node destination-name)))
+      (if (not destination-node)
+	  (begin
+	    (pp "def")
+	    ;; TODO name not correct yet
+	    (pp (define-sub-function *g* parent-node destination-name))))
+      (pp (add-function-call *g* parent-node (string (operator code))))
+      (bgi (operator code) parent-node)
+      (define (bgi-tmp code)
+	(bgi code parent-node))
+      (map bgi-tmp (operands code)))))
 
 (define (bgi-sequence exps parent-node)
   (pp "bgi-sequence")
