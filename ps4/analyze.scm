@@ -11,7 +11,15 @@
 ;;;   env - environment in which to execute this
 ;;;   returns - cell of answer
 (define (eval exp env)
-  ((analyze exp) env))
+  (begin
+    (pp "DEBUG")
+    (pp exp)
+    ;; (pp (definition? exp))
+    ;; (pp (definition-variable exp))
+    ;; (pp (definition-value exp))
+    ;; (pp (car (definition-value exp)))
+    ;; (pp (cdr (definition-value exp)))
+    ((analyze exp) env)))
 
 ;;; ANALYZE
 ;;; A function which, when given an expression returns a combinator
@@ -22,56 +30,79 @@
   (make-generic-operator 1 'analyze
     (lambda (exp)
       (cond ((application? exp)
-	     (analyze-application exp))
+	     (begin
+	       (pp "analyze-root")
+	       (pp exp)
+	       (analyze-application exp)))
 	    (else
 	     (error "Unknown expression type"
 		    exp))))))
 
 (define (analyze-self-evaluating exp)
-  (lambda (env) (default-cell exp)))
+  (begin
+    (pp "analyze-self-evaluating")
+    (pp exp)
+    (lambda (env) (default-cell exp))))
 
 (defhandler analyze analyze-self-evaluating self-evaluating?)
 
-
 (define (analyze-quoted exp)
-  (let ((qval (text-of-quotation exp)))
-    (lambda (env) (default-cell qval))))
+  (begin
+    (pp "analyze-quoted")
+    (pp exp)
+    (let ((qval (text-of-quotation exp)))
+      (lambda (env) (default-cell qval)))))
 
 (defhandler analyze analyze-quoted quoted?)
 
 (define (analyze-variable exp)
-  (lambda (env) (get-variable-cell exp env)))
+  (begin
+    (pp "analyze-variable")
+    (pp exp)
+    (lambda (env) (get-variable-cell exp env))))
 
 (defhandler analyze analyze-variable variable?)
 
 (define (analyze-if exp)
-  (let ((pproc (analyze (if-predicate exp)))
-        (cproc (analyze (if-consequent exp)))
-        (aproc (analyze (if-alternative exp))))
-    (lambda (env)
-      (if (true? (pproc env)) (cproc env) (aproc env)))))
+  (begin
+    (pp "analyze-if")
+    (pp exp)
+    (let ((pproc (analyze (if-predicate exp)))
+	  (cproc (analyze (if-consequent exp)))
+	  (aproc (analyze (if-alternative exp))))
+      (lambda (env)
+	(if (true? (pproc env)) (cproc env) (aproc env))))))
 
 (defhandler analyze analyze-if if?)
 
 (define (analyze-lambda exp)
-  (let ((vars (lambda-parameters exp))
-        (bproc (analyze (lambda-body exp))))
-    (pp vars)
-    (lambda (env)
-      (default-cell (make-compound-procedure vars bproc env)))))
+  (begin
+    (pp "analyze-lambda")
+    (pp exp)
+    (let ((vars (lambda-parameters exp))
+	  (bproc (analyze (lambda-body exp))))
+      (pp vars)
+      (lambda (env)
+	(default-cell (make-compound-procedure vars bproc env))))))
 
 (defhandler analyze analyze-lambda lambda?)
 
 (define (analyze-application exp)
-  (let ((fproc (analyze (operator exp)))
-        (aprocs (map analyze (operands exp))))
-    (lambda (env)
-      (let ((proc-cell (fproc env)))
-	(add-cell-tags!
-	 (execute-application
-	  proc-cell
-	  (map (lambda (aproc) (aproc env)) aprocs))
-	 (cell-tags proc-cell))))))
+  (begin
+    (pp "analyze-application")
+    (pp exp)
+    (pp "Adding call edge to :")
+    (pp (string (operator exp)))
+    (pp (string? (string (operator exp))))
+    (let ((fproc (analyze (operator exp)))
+	  (aprocs (map analyze (operands exp))))
+      (lambda (env)
+	(let ((proc-cell (fproc env)))
+	  (add-cell-tags!
+	   (execute-application
+	    proc-cell
+	    (map (lambda (aproc) (aproc env)) aprocs))
+	   (cell-tags proc-cell)))))))
 
 (define execute-application
   (make-generic-operator 2 'execute-application
@@ -93,6 +124,8 @@
   strict-primitive-procedure?)
 
 (define (analyze-sequence exps)
+  (pp "analyze-sequence")
+  (pp exp)
   (define (sequentially proc1 proc2)
     (lambda (env) (proc1 env) (proc2 env)))
   (define (loop first-proc rest-procs)
@@ -111,22 +144,31 @@
 
 
 (define (analyze-assignment exp)
-  (let ((var (assignment-variable exp))
-        (vproc (analyze (assignment-value exp))))
-    (lambda (env)
-      (let ((cell (vproc env)))
-	(set-variable-cell! var cell env)
-	(default-cell 'ok)))))
+  (begin
+    (pp "analyze-assignment")
+    (pp exp)
+    (let ((var (assignment-variable exp))
+	  (vproc (analyze (assignment-value exp))))
+      (lambda (env)
+	(let ((cell (vproc env)))
+	  (set-variable-cell! var cell env)
+	  (default-cell 'ok))))))
 
 (defhandler analyze analyze-assignment assignment?)
 
 (define (analyze-definition exp)
-  (let ((var (definition-variable exp))
-        (vproc (analyze (definition-value exp))))
-    (lambda (env)
-      (let ((cell (vproc env)))
-	(define-variable! var cell env)
-	(default-cell 'ok)))))
+  (begin
+    (pp "analyze-definition")
+    (pp exp)
+    (pp "Creating node")
+    (pp (definition-variable exp))
+    (pp (definition-value exp))
+    (let ((var (definition-variable exp))
+	  (vproc (analyze (definition-value exp))))
+      (lambda (env)
+	(let ((cell (vproc env)))
+	  (define-variable! var cell env)
+	  (default-cell 'ok))))))
 
 (defhandler analyze analyze-definition definition?)
 
@@ -138,19 +180,25 @@
 
 ;;; Special forms to get tags
 (define (analyze-get-tags exp)
-  (let ((var-exp (tag-var exp)))
-    (lambda (env)
-      (let ((cell ((analyze var-exp) env)))
-	(make-cell (cell-tags cell) (cell-tags cell))))))
+  (begin
+    (pp "analyze-get-tags")
+    (pp exp)
+    (let ((var-exp (tag-var exp)))
+      (lambda (env)
+	(let ((cell ((analyze var-exp) env)))
+	  (make-cell (cell-tags cell) (cell-tags cell)))))))
 
 (define (analyze-add-tag exp)
-  (let ((aobj (analyze (tag-var exp)))
-	(atag (analyze (tag-tag exp))))
-    (lambda (env)
-      (let* ((cell (aobj env))
-	     (tag-cell (atag env))
-	     (tag (cell-value tag-cell)))
-	(add-cell-tag! cell tag)))))
+  (begin
+    (pp "analyze-add-tag")
+    (pp exp)
+    (let ((aobj (analyze (tag-var exp)))
+	  (atag (analyze (tag-tag exp))))
+      (lambda (env)
+	(let* ((cell (aobj env))
+	       (tag-cell (atag env))
+	       (tag (cell-value tag-cell)))
+	  (add-cell-tag! cell tag))))))
 
 (defhandler analyze analyze-get-tags get-tags?)
 (defhandler analyze analyze-add-tag add-tag?)
