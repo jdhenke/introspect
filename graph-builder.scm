@@ -87,13 +87,11 @@
   (begin
     (pp "bgi-application")
     (pp code)
+    (pp "Adding function call edge from/to:")
     (pp parent-node)
-    (pp "Adding call edge from/to:")
-    (pp code)
     (pp (string (operator code)))
-    ;;(pp (string? (string (operator code))))
+    (add-function-call *g* parent-node (string (operator code)))
     (bgi (operator code))
-    ;; TODO fix this map to handle passing parent-node
     (define (bgi-tmp code)
       (bgi code parent-node))
     (map bgi-tmp (operands code))))
@@ -130,7 +128,10 @@
     (pp "Creating node")
     (pp (definition-variable code))
     (pp (definition-value code))
-    (bgi (definition-value code) parent-node)))
+    (let ((this-node (define-sub-function *g* parent-node (definition-variable code))))
+      ;; would add "dependency" edge here, distinct
+      ;; from function-call edge
+      (bgi (definition-value code) this-node))))
 (defhandler bgi bgi-definition definition? any?)
 
 ;;; Macros (definitions are in syntax.scm)
