@@ -85,7 +85,7 @@
     (pp parent-node)))
 (defhandler bgi bgi-lambda lambda? any?)
 
-(define (bgi-application code)
+(define (bgi-application code parent-node)
   (begin
     (pp "bgi-application")
     (pp code)
@@ -96,15 +96,18 @@
     ;;(pp (string? (string (operator code))))
     (bgi (operator code))
     ;; TODO fix this map to handle passing parent-node
-    (map bgi (operands code))))
+    (define (bgi-tmp code)
+      (bgi code parent-node))
+    (map bgi-tmp (operands code))))
 
 (define (bgi-sequence exps parent-node)
   (pp "bgi-sequence")
   (pp exps)
   (pp parent-node)
   (if (null? exps) (error "Empty sequence"))
-  ;; TODO fix this map to handle passing parent-node
-  (map bgi exps))
+  (define (bgi-tmp code)
+    (bgi code parent-node))
+  (map bgi-tmp exps)))
 
 (defhandler bgi
   (lambda (exp)
