@@ -18,7 +18,7 @@
 
 
 (define *g* (create-cfg))
-(define rootnode (cfg:get-root *g*))
+(define rootnode 'rootnode)
 
 (define (build-graph code)
   (bgi code rootnode))
@@ -91,9 +91,8 @@
     ;; TODO doublecheck (string (operator code)) is
     ;; really the correct name of the function
     ;; TODO create node first? Or check for prior existence?
-    (let* ((destination-name (string (operator code)))
-	   (destination-node (cfg:find-node parent-node destination-name)))
-      (pp (add-function-call *g* parent-node (string (operator code))))
+    (let ((destination-name (string (operator code))))
+      (pp (add-function-call *g* parent-node destination-name))
       (bgi (operator code) parent-node)
       (define (bgi-tmp code)
 	(bgi code parent-node))
@@ -132,7 +131,10 @@
     (pp "Creating node")
     (pp (definition-variable code))
     (pp (definition-value code))
-    (let ((this-node (define-sub-function *g* parent-node (definition-variable code))))
+    (let ((this-node
+	   (if (eq? parent-node rootnode)
+	       (define-global-func *g* (definition-variable code))
+	       (define-sub-function *g* parent-node (definition-variable code)))))
       ;; would add "dependency" edge here, distinct
       ;; from function-call edge
       (bgi (definition-value code) this-node))))
