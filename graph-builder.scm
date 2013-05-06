@@ -19,6 +19,7 @@
 
 (define *g* (create-cfg))
 (define rootnode 'rootnode)
+(define (rootnode? r) (eq? r rootnode))
 
 (define (build-graph code)
   (bgi code rootnode))
@@ -70,6 +71,9 @@
     (pp "bgi-if")
     ;;(pp code)
     ;;(pp parent-node)
+    ;;TODO there should be bgi calls to
+    ;;if-predicate if-consequent if-alternative here,
+    ;;a la analyze
     ))
 (defhandler bgi bgi-if if? any?)
 
@@ -110,7 +114,7 @@
 
 (defhandler bgi
   (lambda (code parent-node)
-    (bgi-sequence (begin-actions exp)))
+    (bgi-sequence (begin-actions exp) parent-node))
   begin? any?)
 
 (define (bgi-assignment code parent-node)
@@ -132,7 +136,7 @@
     (pp (definition-variable code))
     (pp (definition-value code))
     (let ((this-node
-	   (if (eq? parent-node rootnode)
+	   (if (rootnode? parent-node)
 	       (define-global-func *g* (definition-variable code))
 	       (define-sub-function *g* parent-node (definition-variable code)))))
       ;; would add "dependency" edge here, distinct
