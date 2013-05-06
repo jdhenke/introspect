@@ -2,6 +2,12 @@
 ;;;   Generic analysis, but not prepared for
 ;;;   extension to handle nonstrict operands.
 
+(cd "../")
+(load "utility")
+(load "graph")
+(load "cfg")
+(cd "ps4")
+
 ;;; EVALUATION
 ;;; Takes place in two separate phases:
 ;;;   1) analyze compiles the expression into a combinator
