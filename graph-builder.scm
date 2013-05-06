@@ -54,54 +54,35 @@
   (begin
     (pp "bgi-self-evaluating")
     (pp code)
-    (pp parent-node)
-    (lambda (env) (default-cell code parent-node))))
-
+    (pp parent-node)))
 (defhandler bgi bgi-self-evaluating self-evaluating? any?)
 
 (define (bgi-quoted code parent-node)
   (begin
     (pp "bgi-quoted")
     (pp code)
-    (pp parent-node)
-    (let ((qval (text-of-quotation code)))
-      (lambda (env) (default-cell qval)))))
-
+    (pp parent-node)))
 (defhandler bgi bgi-quoted quoted? any?)
 
 (define (bgi-variable code parent-node)
   (begin
     (pp "bgi-variable")
     (pp code)
-    (pp parent-node)
-    (lambda (env) (get-variable-cell exp env))))
-
+    (pp parent-node)))
 (defhandler bgi bgi-variable variable? any?)
 
 (define (bgi-if code parent-node)
   (begin
     (pp "bgi-if")
     (pp code)
-    (pp parent-node)
-    (let ((pproc (bgi (if-predicate code)))
-	  (cproc (bgi (if-consequent code)))
-	  (aproc (bgi (if-alternative code))))
-      (lambda (env)
-	(if (true? (pproc env)) (cproc env) (aproc env))))))
-
+    (pp parent-node)))
 (defhandler bgi bgi-if if? any?)
 
 (define (bgi-lambda code parent-node)
   (begin
     (pp "bgi-lambda")
     (pp code)
-    (pp parent-node)
-    (let ((vars (lambda-parameters code))
-	  (bproc (bgi (lambda-body code))))
-      (pp vars)
-      (lambda (env)
-	(default-cell (make-compound-procedure vars bproc env))))))
-
+    (pp parent-node)))
 (defhandler bgi bgi-lambda lambda? any?)
 
 (define (bgi-application code)
@@ -113,54 +94,17 @@
     (pp code)
     (pp (string (operator code)))
     ;;(pp (string? (string (operator code))))
-    (let ((fproc (bgi (operator code)))
-	  (aprocs (map bgi (operands code))))
-      (lambda (env)
-	(let ((proc-cell (fproc env)))
-	  (add-cell-tags!
-	   (execute-application
-	    proc-cell
-	    (map (lambda (aproc) (aproc env)) aprocs))
-	   (cell-tags proc-cell)))))))
-
-(define execute-application
-  (make-generic-operator 2 'execute-application
-    (lambda (proc-cell args-cells)
-      (error "Unknown procedure type" proc-cell))))
-
-(defhandler execute-application
-  (lambda (proc-cell args-cells)
-    (let* ((proc (cell-value proc-cell))
-	   (vars (procedure-parameters proc))
-	   (body (procedure-body proc))
-	   (proc-env (procedure-environment proc)))
-      (let ((new-env (extend-environment vars args-cells proc-env)))
-	    (body new-env))))
-  compound-procedure?)
-
-(defhandler execute-application
-  apply-primitive-procedure
-  strict-primitive-procedure?)
+    (bgi (operator code))
+    ;; TODO fix this map to handle passing parent-node
+    (map bgi (operands code))))
 
 (define (bgi-sequence exps parent-node)
   (pp "bgi-sequence")
   (pp exps)
   (pp parent-node)
-  (define (sequentially proc1 proc2)
-    (lambda (env) (proc1 env) (proc2 env)))
-  (define (loop first-proc rest-procs)
-    (begin
-      (pp "loop")
-      (pp first-proc)
-      (if (null? rest-procs)
-	  first-proc
-	  (loop (sequentially first-proc (car rest-procs))
-		(cdr rest-procs)))))
   (if (null? exps) (error "Empty sequence"))
-  (let ((procs (map bgi exps)))
-    (loop (car procs) (cdr procs))))
-
-;; can trim most of above function
+  ;; TODO fix this map to handle passing parent-node
+  (map bgi exps))
 
 (defhandler bgi
   (lambda (exp)
@@ -172,13 +116,9 @@
     (pp "bgi-assignment")
     (pp code)
     (pp parent-node)
-    (let ((var (assignment-variable code))
-	  (vproc (bgi (assignment-value code))))
-      (lambda (env)
-	(let ((cell (vproc env)))
-	  (set-variable-cell! var cell env)
-	  (default-cell 'ok))))))
-
+    ;; (let ((var (assignment-variable code))
+    ;; 	  (vproc (bgi (assignment-value code))))
+    (bgi (assignment-value code))))
 (defhandler bgi bgi-assignment assignment? any?)
 
 (define (bgi-definition code parent-node)
@@ -189,18 +129,10 @@
     (pp "Creating node")
     (pp (definition-variable code))
     (pp (definition-value code))
-    (let ((var (definition-variable code))
-	  (vproc (bgi (definition-value code))))
-      (lambda (env)
-	(let ((cell (vproc env)))
-	  (define-variable! var cell env)
-	  (default-cell 'ok))))))
-
+    (bgi (definition-value code))))
 (defhandler bgi bgi-definition definition? any?)
 
 ;;; Macros (definitions are in syntax.scm)
-
 (defhandler bgi (compose bgi cond->if) cond? any?)
 
 (defhandler bgi (compose bgi let->combination) let? any?)
-
