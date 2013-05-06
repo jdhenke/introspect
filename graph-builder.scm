@@ -90,6 +90,9 @@
     (pp "Adding function call edge from/to:")
     (pp parent-node)
     (pp (string (operator code)))
+    ;; TODO doublecheck (string (operator code)) is
+    ;; really the correct name of the function
+    ;; TODO create node first? Or check for prior existence?
     (add-function-call *g* parent-node (string (operator code)))
     (bgi (operator code))
     (define (bgi-tmp code)
