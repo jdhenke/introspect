@@ -4,20 +4,18 @@
 ;;; for the code
 
 ;;; Dependencies
-(load "ui")
-(load "graph")
+(load "ps4/utils" user-initial-environment)
+(load "ps4/ghelper" user-initial-environment)
+(load "ps4/syntax" user-initial-environment)
+(load "ps4/rtdata" user-initial-environment)
 (load "utility")
+(load "graph")
+(load "cfg")
 
 ;;; the main method
-;;; example usage:
-;;; (build-graph '(define (func) 3))
-;;; to use:
-;;; (begin
-;;;   (cd "/home/dylan/Dropbox/meng/spring2013/6.945/final-introspect/ps4")
-;;;   (load "load.scm")
-;;;   (cd "/home/dylan/Dropbox/meng/spring2013/6.945/final-introspect")
-;;;   (init))
-;;; (define (r a b c) 3)
+;;; usage
+;; (build-graph '(define (f x) (* x x)))
+
 
 (define *g* (create-cfg))
 (define rootnode (cfg:get-root *g*))
@@ -40,7 +38,7 @@
 (define bgi
   (make-generic-operator 2 'build-graph-inner
     (lambda (code parent-node)
-      (cond ((application? exp)
+      (cond ((application? code)
 	     (begin
 	       (pp "bgi-root")
 	       (pp code)
@@ -48,7 +46,7 @@
 	       (bgi-application code parent-node)))
 	    (else
 	     (error "Unknown expression type"
-		    exp))))))
+		    code))))))
 
 (define (bgi-self-evaluating code parent-node)
   (begin
@@ -107,10 +105,10 @@
   (if (null? exps) (error "Empty sequence"))
   (define (bgi-tmp code)
     (bgi code parent-node))
-  (map bgi-tmp exps)))
+  (map bgi-tmp exps))
 
 (defhandler bgi
-  (lambda (exp)
+  (lambda (code parent-node)
     (bgi-sequence (begin-actions exp)))
   begin? any?)
 
@@ -132,7 +130,7 @@
     (pp "Creating node")
     (pp (definition-variable code))
     (pp (definition-value code))
-    (bgi (definition-value code))))
+    (bgi (definition-value code) parent-node)))
 (defhandler bgi bgi-definition definition? any?)
 
 ;;; Macros (definitions are in syntax.scm)
