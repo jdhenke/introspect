@@ -23,13 +23,6 @@
 (define (build-graph code)
   (bgi code rootnode))
 
-;; (define (build-graph-inner code parent-node)
-;;   (let* ((defname (definition-variable code))
-;; 	(body (definition-value code))
-;; 	((defnode define-sub-function parent-node defname)))
-;;     ))
-
-
 ;;; CODE POACHED FROM ANALYZE
 ;;; A function which, when given an expression returns a combinator
 ;;; A combinator is a function which given and environment produces
@@ -51,36 +44,40 @@
 (define (bgi-self-evaluating code parent-node)
   (begin
     (pp "bgi-self-evaluating")
-    (pp code)
-    (pp parent-node)))
+    ;;(pp code)
+    ;;(pp parent-node)
+    ))
 (defhandler bgi bgi-self-evaluating self-evaluating? any?)
 
 (define (bgi-quoted code parent-node)
   (begin
     (pp "bgi-quoted")
-    (pp code)
-    (pp parent-node)))
+    ;;(pp code)
+    ;;(pp parent-node)
+    ))
 (defhandler bgi bgi-quoted quoted? any?)
 
 (define (bgi-variable code parent-node)
   (begin
     (pp "bgi-variable")
-    (pp code)
-    (pp parent-node)))
+    ;;(pp code)
+    ;;(pp parent-node)
+    ))
 (defhandler bgi bgi-variable variable? any?)
 
 (define (bgi-if code parent-node)
   (begin
     (pp "bgi-if")
-    (pp code)
-    (pp parent-node)))
+    ;;(pp code)
+    ;;(pp parent-node)
+    ))
 (defhandler bgi bgi-if if? any?)
 
 (define (bgi-lambda code parent-node)
   (begin
     (pp "bgi-lambda")
-    (pp code)
-    (pp parent-node)
+    ;;(pp code)
+    ;;(pp parent-node)
     (bgi (lambda-body code) parent-node)))
 (defhandler bgi bgi-lambda lambda? any?)
 
@@ -96,11 +93,6 @@
     ;; TODO create node first? Or check for prior existence?
     (let* ((destination-name (string (operator code)))
 	   (destination-node (cfg:find-node parent-node destination-name)))
-      (if (not destination-node)
-	  (begin
-	    (pp "def")
-	    ;; TODO name not correct yet
-	    (pp (define-sub-function *g* parent-node destination-name))))
       (pp (add-function-call *g* parent-node (string (operator code))))
       (bgi (operator code) parent-node)
       (define (bgi-tmp code)
@@ -108,13 +100,14 @@
       (map bgi-tmp (operands code)))))
 
 (define (bgi-sequence exps parent-node)
-  (pp "bgi-sequence")
-  (pp exps)
-  (pp parent-node)
-  (if (null? exps) (error "Empty sequence"))
-  (define (bgi-tmp code)
-    (bgi code parent-node))
-  (map bgi-tmp exps))
+  (begin
+    (pp "bgi-sequence")
+    ;;(pp exps)
+    ;;(pp parent-node)
+    (if (null? exps) (error "Empty sequence"))
+    (define (bgi-tmp code)
+      (bgi code parent-node))
+    (map bgi-tmp exps)))
 
 (defhandler bgi
   (lambda (code parent-node)
