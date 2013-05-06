@@ -8,6 +8,10 @@
 (load "cfg")
 (cd "ps4")
 
+(define *g* (create-cfg))
+(define rootnode 'rootnode)
+(define (rootnode? r) (eq? r rootnode))
+
 ;;; EVALUATION
 ;;; Takes place in two separate phases:
 ;;;   1) analyze compiles the expression into a combinator
@@ -25,57 +29,62 @@
 ;;; The result of evaluating the expression in the environment
 ;;; Returns the cell of the answer
 (define analyze
-  (make-generic-operator 1 'analyze
-    (lambda (exp)
+  (make-generic-operator 2 'analyze
+    (lambda (exp parent-node)
       (cond ((application? exp)
-	     (analyze-application exp))
+	     (analyze-application exp parent-node))
 	    (else
 	     (error "Unknown expression type"
 		    exp))))))
 
-(define (analyze-self-evaluating exp)
+(define (analyze-self-evaluating exp parent-node)
   (lambda (env) (default-cell exp)))
 
-(defhandler analyze analyze-self-evaluating self-evaluating?)
+(defhandler analyze analyze-self-evaluating self-evaluating? any?)
 
-(define (analyze-quoted exp)
+(define (analyze-quoted exp parent-node)
   (let ((qval (text-of-quotation exp)))
     (lambda (env) (default-cell qval))))
 
-(defhandler analyze analyze-quoted quoted?)
+(defhandler analyze analyze-quoted quoted? any?)
 
-(define (analyze-variable exp)
+(define (analyze-variable exp parent-node)
   (lambda (env) (get-variable-cell exp env)))
 
-(defhandler analyze analyze-variable variable?)
+(defhandler analyze analyze-variable variable? any?)
 
-(define (analyze-if exp)
-  (let ((pproc (analyze (if-predicate exp)))
-	(cproc (analyze (if-consequent exp)))
-	(aproc (analyze (if-alternative exp))))
+(define (analyze-if exp parent-node)
+  (let ((pproc (analyze (if-predicate exp) parent-node))
+	(cproc (analyze (if-consequent exp) parent-node))
+	(aproc (analyze (if-alternative exp) parent-node)))
     (lambda (env)
       (if (true? (pproc env)) (cproc env) (aproc env)))))
 
-(defhandler analyze analyze-if if?)
+(defhandler analyze analyze-if if? any?)
 
-(define (analyze-lambda exp)
+(define (analyze-lambda exp parent-node)
   (let ((vars (lambda-parameters exp))
-	(bproc (analyze (lambda-body exp))))
+	(bproc (analyze (lambda-body exp) parent-node)))
     (lambda (env)
       (default-cell (make-compound-procedure vars bproc env)))))
 
-(defhandler analyze analyze-lambda lambda?)
+(defhandler analyze analyze-lambda lambda? any?)
 
-(define (analyze-application exp)
-  (let ((fproc (analyze (operator exp)))
-	(aprocs (map analyze (operands exp))))
-    (lambda (env)
-      (let ((proc-cell (fproc env)))
-	(add-cell-tags!
-	 (execute-application
-	  proc-cell
-	  (map (lambda (aproc) (aproc env)) aprocs))
-	 (cell-tags proc-cell))))))
+(define (analyze-application exp parent-node)
+  (define (analyze-tmp exp)
+    (analyze exp parent-node))
+  (let ((destination-name (string (operator exp))))
+    ;; add a call edge
+    (add-function-call *g* parent-node destination-name)
+    (let ((fproc (analyze (operator exp) parent-node))
+	  (aprocs (map analyze-tmp (operands exp))))
+      (lambda (env)
+	(let ((proc-cell (fproc env)))
+	  (add-cell-tags!
+	   (execute-application
+	    proc-cell
+	    (map (lambda (aproc) (aproc env)) aprocs))
+	   (cell-tags proc-cell)))))))
 
 (define execute-application
   (make-generic-operator 2 'execute-application
@@ -96,7 +105,7 @@
   apply-primitive-procedure
   strict-primitive-procedure?)
 
-(define (analyze-sequence exps)
+(define (analyze-sequence exps parent-node)
   (define (sequentially proc1 proc2)
     (lambda (env) (proc1 env) (proc2 env)))
   (define (loop first-proc rest-procs)
@@ -105,43 +114,49 @@
         (loop (sequentially first-proc (car rest-procs))
               (cdr rest-procs))))
   (if (null? exps) (error "Empty sequence"))
-  (let ((procs (map analyze exps)))
+  (define (analyze-tmp exp)
+    (analyze exp parent-node))
+  (let ((procs (map analyze-tmp exps)))
     (loop (car procs) (cdr procs))))
 
 (defhandler analyze
-  (lambda (exp)
-    (analyze-sequence (begin-actions exp)))
-  begin?)
+  (lambda (exp parent-node)
+    (analyze-sequence (begin-actions exp) parent-node))
+  begin? any?)
 
 
-(define (analyze-assignment exp)
+(define (analyze-assignment exp parent-node)
   (let ((var (assignment-variable exp))
-	(vproc (analyze (assignment-value exp))))
+	(vproc (analyze (assignment-value exp) parent-node)))
     (lambda (env)
       (let ((cell (vproc env)))
 	(set-variable-cell! var cell env)
 	(default-cell 'ok)))))
 
-(defhandler analyze analyze-assignment assignment?)
+(defhandler analyze analyze-assignment assignment? any?)
 
-(define (analyze-definition exp)
-  (let ((var (definition-variable exp))
-	(vproc (analyze (definition-value exp))))
-    (lambda (env)
-      (let ((cell (vproc env)))
-	(define-variable! var cell env)
-	(default-cell 'ok)))))
+(define (analyze-definition exp parent-node)
+  (let ((this-node
+	 (if (rootnode? parent-node)
+	     (define-global-func *g* (definition-variable exp))
+	     (define-sub-function *g* parent-node (definition-variable exp)))))
+    (let ((var (definition-variable exp))
+	  (vproc (analyze (definition-value exp) parent-node)))
+      (lambda (env)
+	(let ((cell (vproc env)))
+	  (define-variable! var cell env)
+	  (default-cell 'ok))))))
 
-(defhandler analyze analyze-definition definition?)
+(defhandler analyze analyze-definition definition? any?)
 
 ;;; Macros (definitions are in syntax.scm)
 
-(defhandler analyze (compose analyze cond->if) cond?)
+(defhandler analyze (compose analyze cond->if) cond? any?)
 
-(defhandler analyze (compose analyze let->combination) let?)
+(defhandler analyze (compose analyze let->combination) let? any?)
 
 ;;; Special forms to get tags
-(define (analyze-get-tags exp)
+(define (analyze-get-tags exp parent-node)
   (begin
     (pp "analyze-get-tags")
     (pp exp)
@@ -150,7 +165,7 @@
 	(let ((cell ((analyze var-exp) env)))
 	  (make-cell (cell-tags cell) (cell-tags cell)))))))
 
-(define (analyze-add-tag exp)
+(define (analyze-add-tag exp parent-node)
   (begin
     (pp "analyze-add-tag")
     (pp exp)
@@ -162,5 +177,5 @@
 	       (tag (cell-value tag-cell)))
 	  (add-cell-tag! cell tag))))))
 
-(defhandler analyze analyze-get-tags get-tags?)
-(defhandler analyze analyze-add-tag add-tag?)
+(defhandler analyze analyze-get-tags get-tags? any?)
+(defhandler analyze analyze-add-tag add-tag? any?)
