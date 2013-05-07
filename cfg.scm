@@ -269,3 +269,7 @@
 ;;; Return all executions of a given edge
 (define (get-executions edge)
   (function-call-executions (get-edge-data edge)))
+
+;;; Print a cfg graph
+(define (pp-cfg graph)
+  (pp-graph (cfg:get-graph graph)))

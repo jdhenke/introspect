@@ -118,3 +118,14 @@
 	(dest-node (edge-dest-node edge)))
     (set-node-outgoing-edges! src-node (delq edge (node-outgoing-edges src-node)))
     (set-node-incoming-edges! dest-node (delq edge (node-incoming-edges dest-node)))))
+
+;;; Prints all nodes in a graph
+(define (pp-graph graph)
+  (define (loop first-node rest-nodes)
+    (if (null? rest-nodes)
+	(pp first-node)
+	(begin
+	  (pp first-node)
+	  (loop (car rest-nodes) (cdr rest-nodes)))))
+  (let ((nodes (get-nodes graph)))
+    (loop (car nodes) (cdr nodes))))
