@@ -145,7 +145,7 @@
 	     (define-global-func *g* (definition-variable exp))
 	     (define-sub-function *g* parent-node (definition-variable exp)))))
     (let ((var (definition-variable exp))
-	  (vproc (analyze (definition-value exp) parent-node)))
+	  (vproc (analyze (definition-value exp) this-node)))
       (lambda (env)
 	(let ((cell (vproc env)))
 	  (define-variable! var cell env)
