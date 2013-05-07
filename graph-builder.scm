@@ -18,17 +18,11 @@
 
 
 (define *g* (create-cfg))
-(define rootnode (cfg:get-root *g*))
+(define rootnode 'rootnode)
+(define (rootnode? r) (eq? r rootnode))
 
 (define (build-graph code)
   (bgi code rootnode))
-
-;; (define (build-graph-inner code parent-node)
-;;   (let* ((defname (definition-variable code))
-;; 	(body (definition-value code))
-;; 	((defnode define-sub-function parent-node defname)))
-;;     ))
-
 
 ;;; CODE POACHED FROM ANALYZE
 ;;; A function which, when given an expression returns a combinator
@@ -51,36 +45,43 @@
 (define (bgi-self-evaluating code parent-node)
   (begin
     (pp "bgi-self-evaluating")
-    (pp code)
-    (pp parent-node)))
+    ;;(pp code)
+    ;;(pp parent-node)
+    ))
 (defhandler bgi bgi-self-evaluating self-evaluating? any?)
 
 (define (bgi-quoted code parent-node)
   (begin
     (pp "bgi-quoted")
-    (pp code)
-    (pp parent-node)))
+    ;;(pp code)
+    ;;(pp parent-node)
+    ))
 (defhandler bgi bgi-quoted quoted? any?)
 
 (define (bgi-variable code parent-node)
   (begin
     (pp "bgi-variable")
-    (pp code)
-    (pp parent-node)))
+    ;;(pp code)
+    ;;(pp parent-node)
+    ))
 (defhandler bgi bgi-variable variable? any?)
 
 (define (bgi-if code parent-node)
   (begin
     (pp "bgi-if")
-    (pp code)
-    (pp parent-node)))
+    ;;(pp code)
+    ;;(pp parent-node)
+    ;;TODO there should be bgi calls to
+    ;;if-predicate if-consequent if-alternative here,
+    ;;a la analyze
+    ))
 (defhandler bgi bgi-if if? any?)
 
 (define (bgi-lambda code parent-node)
   (begin
     (pp "bgi-lambda")
-    (pp code)
-    (pp parent-node)
+    ;;(pp code)
+    ;;(pp parent-node)
     (bgi (lambda-body code) parent-node)))
 (defhandler bgi bgi-lambda lambda? any?)
 
@@ -94,31 +95,26 @@
     ;; TODO doublecheck (string (operator code)) is
     ;; really the correct name of the function
     ;; TODO create node first? Or check for prior existence?
-    (let* ((destination-name (string (operator code)))
-	   (destination-node (cfg:find-node parent-node destination-name)))
-      (if (not destination-node)
-	  (begin
-	    (pp "def")
-	    ;; TODO name not correct yet
-	    (pp (define-sub-function *g* parent-node destination-name))))
-      (pp (add-function-call *g* parent-node (string (operator code))))
+    (let ((destination-name (string (operator code))))
+      (pp (add-function-call *g* parent-node destination-name))
       (bgi (operator code) parent-node)
       (define (bgi-tmp code)
 	(bgi code parent-node))
       (map bgi-tmp (operands code)))))
 
 (define (bgi-sequence exps parent-node)
-  (pp "bgi-sequence")
-  (pp exps)
-  (pp parent-node)
-  (if (null? exps) (error "Empty sequence"))
-  (define (bgi-tmp code)
-    (bgi code parent-node))
-  (map bgi-tmp exps))
+  (begin
+    (pp "bgi-sequence")
+    ;;(pp exps)
+    ;;(pp parent-node)
+    (if (null? exps) (error "Empty sequence"))
+    (define (bgi-tmp code)
+      (bgi code parent-node))
+    (map bgi-tmp exps)))
 
 (defhandler bgi
   (lambda (code parent-node)
-    (bgi-sequence (begin-actions exp)))
+    (bgi-sequence (begin-actions exp) parent-node))
   begin? any?)
 
 (define (bgi-assignment code parent-node)
@@ -139,7 +135,10 @@
     (pp "Creating node")
     (pp (definition-variable code))
     (pp (definition-value code))
-    (let ((this-node (define-sub-function *g* parent-node (definition-variable code))))
+    (let ((this-node
+	   (if (rootnode? parent-node)
+	       (define-global-func *g* (definition-variable code))
+	       (define-sub-function *g* parent-node (definition-variable code)))))
       ;; would add "dependency" edge here, distinct
       ;; from function-call edge
       (bgi (definition-value code) this-node))))
