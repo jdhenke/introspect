@@ -247,13 +247,18 @@
 ;;; different type of edge for invocations than we do for defines.
 
 ;;; Add a function call to a cfg
-;;; Given the cfg, calling function and the called function, add a directed edge
-;;; from caller to callee.
+;;; Given the cfg, calling function node and the called function name, add a
+;;; directed edge from caller to callee. Will create a new "undefined" node as a
+;;; placeholder until it is defined for any currently undefined nodes
 (define (add-function-call cfg caller callee)
   (let ((ce-f (cfg:find-callable-node caller callee)))
     (if (eq? ce-f #f) ; callee not defined, add place holder
 	(set! ce-f (cfg:add-undefined-function cfg caller callee)))
     (cfg:add-call-edge caller ce-f)))
+
+;;; Handle special case of calling global function.
+(define (add-global-call cfg callee)
+  (add-function-call cfg (cfg:get-root cfg) callee))
 
 ;;; Add an execution of the given edge with provided inputs and outputs
 (define (add-execution edge inputs outputs)
