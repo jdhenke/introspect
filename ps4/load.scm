@@ -7,6 +7,12 @@
 (define generic-evaluation-environment
   (extend-top-level-environment user-initial-environment))
 
+(cd "../")
+(load "utility")
+(load "graph")
+(load "cfg")
+(cd "ps4")
+
 (load "analyze" generic-evaluation-environment)
 (load "repl" generic-evaluation-environment)
 

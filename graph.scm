@@ -102,13 +102,11 @@
   (set-graph-nodes! graph
 		    (delq node (graph-nodes graph)))
   (for-each (lambda (e)
-	      (let ((to-node (edge-dest-node e)))
-		(remove-edge! e)))
+		(remove-edge! e))
 	    (node-outgoing-edges node))
 
   (for-each (lambda (e)
-	      (let ((from-node (edge-src-node e)))
-		(remove-edge! e)))
+	      (remove-edge! e))
 	    (node-incoming-edges node)))
 
 ;;; Removes edge from graph

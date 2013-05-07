@@ -2,12 +2,6 @@
 ;;;   Generic analysis, but not prepared for
 ;;;   extension to handle nonstrict operands.
 
-(cd "../")
-(load "utility")
-(load "graph")
-(load "cfg")
-(cd "ps4")
-
 (define *g* (create-cfg))
 (define rootnode 'rootnode)
 (define (rootnode? r) (eq? r rootnode))
@@ -73,7 +67,7 @@
 (define (analyze-application exp parent-node)
   (define (analyze-tmp exp)
     (analyze exp parent-node))
-  (let ((destination-name (string (operator exp))))
+  (let ((destination-name (operator exp)))
     ;; add a call edge
     (pp "Adding edge to/from")
     (pp exp)

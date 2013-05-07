@@ -4,10 +4,6 @@
 ;;; control flow graphs we generate for a given program. This should implement
 ;;; procedures to make it more natural to construct a control flow graph.
 
-;;; Dependencies
-(load "graph")
-(load "utility")
-
 ;;; Define some data types that will be used
 ;;; These will be used to:
 ;;;  - differentiate between eachother
@@ -87,10 +83,16 @@
 	     ;; remove old possible-function-def edges
 	     ((possible-function-def? etype) (remove-edge! e))
 	     ;; transfer call edges to new-node
-	     ((function-call? etype) (set-edge-dest-node! e new-node))
+	     ((function-call? etype)
+	      (begin
+		(add-edge (edge-src-node e) new-node etype)
+		(remove-edge! e)))
 	     ;; no other edge types should exist
 	     (else (assert #f "shouldn't have function defs here!")))))
-	  (get-incoming-edges node)))
+	  (get-incoming-edges node))
+       ;; remove old node
+       (remove-node! (cfg:get-graph cfg) node)
+       )
        nodes))
 
   (let ((nodes (cfg:find-defined-node p-node function))
@@ -107,6 +109,7 @@
      ;; a new node for the new definition.
      (else
       (begin (assert (= (length nodes) 1) "should only find at most 1 previous function definition")
+	     (pp `("replacing definition for " ,(cfg:node-name (car nodes))))
 	     (let ((def-edge (find (lambda (e)
 				     (and (function-def? (get-edge-data e))
 					  (eq? (edge-dest-node e) (car nodes))))
@@ -233,6 +236,7 @@
 (define (define-global-func cfg f)
   (let* ((root (cfg:get-root cfg))
 	(func (cfg:add-function cfg root *global* f)))
+    (pp `("add definition from " ,root " to " ,func))
     (cfg:add-define-edge root func)
     func))
 
@@ -242,6 +246,7 @@
 ;;; 'sub-f'. Return the node of the sub-function.
 (define (define-sub-function cfg parent sub-f)
   (let ((sub-f (cfg:add-function cfg parent *normal* sub-f)))
+    (pp `("add definition from " ,parent " to " ,sub-f))
     (cfg:add-define-edge parent sub-f)
     sub-f))
 
@@ -256,6 +261,7 @@
   (let ((ce-f (cfg:find-callable-node caller callee)))
     (if (eq? ce-f #f) ; callee not defined, add place holder
 	(set! ce-f (cfg:add-undefined-function cfg caller callee)))
+    (pp `("add function call from " ,caller " to " ,ce-f))
     (cfg:add-call-edge caller ce-f)))
 
 ;;; Handle special case of calling global function.
