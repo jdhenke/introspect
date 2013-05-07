@@ -3,4 +3,4 @@
       (extend-environment '() '() the-empty-environment))
 ;;; Use our own eval and our own environment construct
 (set! hook/repl-eval (lambda (input default/env defaul/repl)
-		       (eval input the-global-environment)))
+		       (cell-value (eval input the-global-environment))))

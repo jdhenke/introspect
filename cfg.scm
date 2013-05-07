@@ -105,13 +105,15 @@
      ;; otherwise, handle case of redefining previously defined node. Do
      ;; this by removing the define edge to the old definition and creating
      ;; a new node for the new definition.
-     (else (let ((def-edge (find (lambda (e)
-				   (and (function-def? (get-edge-data e))
-					(eq? (edge-dest-node e) nodes)))
-				 (node-outgoing-edges p-node))))
-	     (assert (not (eq? def-edge #f)))
-	     (remove-edge! def-edge)
-	     new-node)))))
+     (else
+      (begin (assert (= (length nodes) 1) "should only find at most 1 previous function definition")
+	     (let ((def-edge (find (lambda (e)
+				     (and (function-def? (get-edge-data e))
+					  (eq? (edge-dest-node e) (car nodes))))
+				   (node-outgoing-edges p-node))))
+	       (assert (not (eq? def-edge #f)))
+	       (remove-edge! def-edge)
+	       new-node))))))
 
 ;;; add an undefined function 'function' to the given 'cfg'
 (define (cfg:add-undefined-function cfg caller function)
