@@ -14,6 +14,7 @@
 ;;;  - store additional data for function calls
 ;;;    - these are stored as a list of executions
 (define-structure function-def)
+(define-structure possible-function-def)
 (define-structure function-call executions)
 (define-structure execution inputs output)
 
@@ -54,22 +55,82 @@
 
 ;;; cfg (private) helper procedures
 
+;;; given a node defining the local scope and a function name, find any node
+;;; within the current scope called the given name. Possible returns multiple
+;;; undefined nodes if they were possibly defined in different scopes but have
+;;; the same name.
+(define (cfg:find-defined-node p-node f)
+  (define (filter-for-node nodes)
+    (filter (lambda (n)
+	    (eq? (cfg:node-name n) f))
+	  nodes))
+  (filter-for-node
+   (cfg:get-nodes-by-edge p-node
+			  (lambda (e)
+			    (or (function-def? e)
+				(possible-function-def? e))))))
+
+
+
 ;;; add 'function' of given 'type', with reference to current scope defined by
 ;;; p-node in the given 'cfg'
 (define (cfg:add-function cfg p-node type function)
   (assert (node? p-node) "need a node object")
-  (let ((func (cfg:find-node p-node function)))
-    (if (eq? func #f)
-	(add-node (cfg:get-graph cfg) (cfg:make-descriptor type function))
-	(let ((ntype (cfg:node-type func)))
-	  (if (eq? ntype *undefined*)
-	      (begin (set-node-data! func (cfg:make-descriptor type function))
-		     func)
-	      (error "attempting to redefine existing function - not implemented yet!"))))))
+  ;; helper function to merge several undefined nodes into one new (defined) node.
+  (define (merge-nodes nodes new-node)
+    (for-each
+     (lambda (node)
+       (for-each
+	(lambda (e)
+	  (let ((etype (get-edge-data e)))
+	    (cond
+	     ;; remove old possible-function-def edges
+	     ((possible-function-def? etype) (remove-edge! e))
+	     ;; transfer call edges to new-node
+	     ((function-call? etype) (set-edge-dest-node! e new-node))
+	     ;; no other edge types should exist
+	     (else (assert #f "shouldn't have function defs here!")))))
+	  (get-incoming-edges node)))
+       nodes))
+
+  (let ((nodes (cfg:find-defined-node p-node function))
+	(new-node (add-node (cfg:get-graph cfg) (cfg:make-descriptor type function))))
+    (cond
+     ;; no node named `function defined in this scope, add new node
+     ((null? nodes)
+      new-node)
+     ;; replace undefined node with definition
+     ((eq? (cfg:node-type (car nodes)) *undefined*)
+      (begin (merge-nodes nodes new-node) new-node))
+     ;; otherwise, handle case of redefining previously defined node. Do
+     ;; this by removing the define edge to the old definition and creating
+     ;; a new node for the new definition.
+     (else (let ((def-edge (find (lambda (e)
+				   (and (function-def? (get-edge-data e))
+					(eq? (edge-dest-node e) nodes)))
+				 (node-outgoing-edges p-node))))
+	     (assert (not (eq? def-edge #f)))
+	     (remove-edge! def-edge)
+	     new-node)))))
 
 ;;; add an undefined function 'function' to the given 'cfg'
-(define (cfg:add-undefined-function cfg function)
-  (add-node (cfg:get-graph cfg) (cfg:make-descriptor *undefined* function)))
+(define (cfg:add-undefined-function cfg caller function)
+  (let ((nodes (cfg:find-defined-node caller function)))
+    (if (null? nodes)
+	;; If no placeholder node exists in this scope, create it
+	(let ((node (add-node (cfg:get-graph cfg)
+			      (cfg:make-descriptor *undefined* function))))
+	  ;; recursively add possible definition edges from every ancestor to new
+	  ;; node, to encode all the possible valid define edges if this undefined
+	  ;; node is ever defined in the future.
+	  (let lp ((parent caller))
+	    (add-edge parent node (make-possible-function-def))
+	    (if (cfg:root-node? parent)
+		node
+		(lp (cfg:defined-by parent)))))
+	;; return existing one
+	(begin (assert (= (length nodes) 1)) (car nodes)))))
+
 
 (define (cfg:get-graph cfg)
   (car cfg))
@@ -99,16 +160,24 @@
 	 (edge (find (lambda (e)
 		       (function-def? (get-edge-data e)))
 		     edges)))
-    (assert (not (eq? edge #f)) "should have single incoming edge")
+    (assert (not (eq? edge #f)) "should have single incoming define edge")
     (edge-src-node edge)))
 
 ;;; Given a function node, return the node of every function it defines.
-(define (cfg:get-defines func)
+(define (cfg:get-nodes-by-edge func edge-pred)
   (assert (node? func) "need a node object")
   (let ((edges (get-outgoing-edges func)))
     (map edge-dest-node
-	 (filter (lambda (e) (function-def? (get-edge-data e)))
+	 (filter (lambda (e) (edge-pred (get-edge-data e)))
 		 edges))))
+
+;;; Given a function node, return the node of every function it defines.
+(define (cfg:get-defines func)
+  (cfg:get-nodes-by-edge func function-def?))
+
+;;; Given a function node, return the node of every function it defines.
+(define (cfg:get-possible-defines func)
+  (cfg:get-nodes-by-edge func possible-function-def?))
 
 ;;; Given a function node, find the nodes of all other functions within the same
 ;;; namespace.
@@ -121,17 +190,16 @@
 
 ;;; given a node defining the local scope and a function name, find
 ;;; appropriate node, recursively looking upward through scopes
-(define (cfg:find-node p-node f)
+(define (cfg:find-callable-node p-node f)
   (define (filter-for-node nodes)
     (find (lambda (n)
 	    (eq? (cfg:node-name n) f))
 	  nodes))
-  ;; if global scope
   (let lp ((peers (cfg:get-defines p-node))
 	   (parent p-node))
     (let ((func (filter-for-node peers)))
-      (cond ((cfg:root-node? parent) func)
-	    ((not (eq? func #f)) func)
+      (cond ((cfg:root-node? parent) func) ; If parent is root, return what we have
+	    ((not (eq? func #f)) func) ; if we found it
 	    (else (let ((parent-parent (cfg:defined-by parent)))
 		    (lp (cfg:get-defines parent-parent) parent-parent)))))))
 
@@ -182,16 +250,17 @@
 ;;; Given the cfg, calling function and the called function, add a directed edge
 ;;; from caller to callee.
 (define (add-function-call cfg caller callee)
-  (let ((ce-f (cfg:find-node caller callee)))
+  (let ((ce-f (cfg:find-callable-node caller callee)))
     (if (eq? ce-f #f) ; callee not defined, add place holder
-	(set! ce-f (cfg:add-undefined-function cfg callee)))
+	(set! ce-f (cfg:add-undefined-function cfg caller callee)))
     (cfg:add-call-edge caller ce-f)))
 
-;;;
+;;; Add an execution of the given edge with provided inputs and outputs
 (define (add-execution edge inputs outputs)
   (let ((exec (make-execution inputs outputs)))
     (cfg:add-execution edge exec)
     exec))
 
+;;; Return all executions of a given edge
 (define (get-executions edge)
   (function-call-executions (get-edge-data edge)))
