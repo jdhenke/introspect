@@ -23,6 +23,7 @@
 (define *global* 'global)
 (define *normal* 'non-global)
 (define *undefined* 'undefined)
+(define *primitive* 'primitive)
 
 ;;; We associate a description list with each node in our cfg. These descriptors
 ;;; indicate which type the function is (global or not) and the name associated
@@ -45,6 +46,8 @@
   (eq? (cfg:node-type node) *global*))
 (define (cfg:undefined-node? node)
   (eq? (cfg:node-type node) *undefined*))
+(define (cfg:primitive-node? node)
+  (eq? (cfg:node-type node) *primitive*))
 (define (cfg:root-node? node)
   (eq? (cfg:node-type node) *root*))
 (define (cfg? cfg)
@@ -104,7 +107,7 @@
      ((null? nodes)
       new-node)
      ;; replace undefined node with definition
-     ((eq? (cfg:node-type (car nodes)) *undefined*)
+     ((cfg:undefined-node? (car nodes))
       (begin (merge-nodes nodes new-node) new-node))
      ;; otherwise, handle case of redefining previously defined node. Do
      ;; this by removing the define edge to the old definition and creating
@@ -138,6 +141,9 @@
 	;; return existing one
 	(begin (assert (= (length nodes) 1)) (car nodes)))))
 
+
+(define (cfg:add-primitive-function cfg function)
+  (add-node (cfg:get-graph cfg) (cfg:make-descriptor *primitive* function)))
 
 (define (cfg:get-graph cfg)
   (car cfg))
@@ -210,6 +216,19 @@
 	    (else (let ((parent-parent (cfg:defined-by parent)))
 		    (lp (cfg:get-defines parent-parent) parent-parent)))))))
 
+(define (cfg:find-primitive-function cfg f)
+  (define (assigned-and-bound? symb)
+    (eq? 'normal (environment-reference-type system-global-environment symb)))
+  (define (filter-for-node nodes)
+    (find (lambda (n)
+	    (eq? (cfg:node-name n) f))
+	  nodes))
+  (let ((func (filter-for-node (filter (lambda (n) (cfg:primitive-node? n))
+				       (get-nodes (cfg:get-graph cfg))))))
+    (cond ((not (eq? func #f)) func)
+	  ((assigned-and-bound? f) (cfg:add-primitive-function cfg f))
+	  (else #f))))
+
 (define (cfg:add-execution edge exec)
   (assert (edge? edge))
   (assert (execution? exec))
@@ -262,7 +281,9 @@
 (define (add-function-call cfg caller callee)
   (let ((ce-f (cfg:find-callable-node caller callee)))
     (if (eq? ce-f #f) ; callee not defined, add place holder
-	(set! ce-f (cfg:add-undefined-function cfg caller callee)))
+	(begin (set! ce-f (cfg:find-primitive-function cfg callee))
+	       (if (eq? ce-f #f) ; callee not defined, add place holder
+		   (set! ce-f (cfg:add-undefined-function cfg caller callee)))))
     (pp `("add function call from " ,caller " to " ,ce-f))
     (cfg:add-call-edge caller ce-f)))
 
@@ -320,6 +341,7 @@
 	       ((cfg:root-node? n) (write "point"))
 	       ((cfg:global-node? n) (write "box"))
 	       ((cfg:undefined-node? n) (write "doublecircle"))
+	       ((cfg:primitive-node? n) (write "diamond"))
 	       (else (write "ellipse")))
 	      (write-string "];")
 	      (newline))
