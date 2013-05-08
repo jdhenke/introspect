@@ -72,7 +72,6 @@
     (pp "Adding edge to/from")
     (pp exp)
     (pp parent-node)
-    (pp (string (operator exp)))
     (if (rootnode? parent-node)
 	     (add-global-call *g* destination-name)
 	     (add-function-call *g* parent-node destination-name))
@@ -151,9 +150,11 @@
 
 ;;; Macros (definitions are in syntax.scm)
 
-(defhandler analyze (compose analyze cond->if) cond? any?)
+(defhandler analyze (lambda (exp node) (analyze (cond->if exp) node))
+  cond? any?)
 
-(defhandler analyze (compose analyze let->combination) let? any?)
+(defhandler analyze (lambda (exp node) (analyze (let->combination exp) node))
+  let? any?)
 
 ;;; Special forms to get tags
 (define (analyze-get-tags exp parent-node)
