@@ -281,9 +281,9 @@
 (define (add-function-call cfg caller callee)
   (let ((ce-f (cfg:find-callable-node caller callee)))
     (if (eq? ce-f #f) ; callee not defined, add place holder
-	(fluid-let ((ce-f (cfg:find-primitive-function cfg callee)))
-	  (if (eq? ce-f #f) ; callee not defined, add place holder
-	      (set! ce-f (cfg:add-undefined-function cfg caller callee)))))
+	(begin (set! ce-f (cfg:find-primitive-function cfg callee))
+	       (if (eq? ce-f #f) ; callee not defined, add place holder
+		   (set! ce-f (cfg:add-undefined-function cfg caller callee)))))
     (pp `("add function call from " ,caller " to " ,ce-f))
     (cfg:add-call-edge caller ce-f)))
 
@@ -341,6 +341,7 @@
 	       ((cfg:root-node? n) (write "point"))
 	       ((cfg:global-node? n) (write "box"))
 	       ((cfg:undefined-node? n) (write "doublecircle"))
+	       ((cfg:primitive-node? n) (write "diamond"))
 	       (else (write "ellipse")))
 	      (write-string "];")
 	      (newline))
