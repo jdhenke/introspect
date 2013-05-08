@@ -180,3 +180,19 @@
 
 (defhandler analyze analyze-get-tags get-tags? any?)
 (defhandler analyze analyze-add-tag add-tag? any?)
+
+(define (analyze-ignore exp parent-node)
+  (pp (cadr exp))
+
+  (lambda (env)
+    (default-repl-eval (cadr exp) generic-evaluation-environment 'sussman-explain-me?)
+    (default-cell 'ok)))
+
+; set hook repl eval to default repl eval
+; call repl/eval with expression and generic-evaluation-environment
+; reset hook/repl-eval as in setup.scm
+
+(defhandler analyze analyze-ignore
+  (lambda (exp)
+    (and (list? exp)
+	 (eq? 'ignore (car exp)))))
