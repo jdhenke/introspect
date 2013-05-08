@@ -240,6 +240,16 @@
 
 ;;; cfg public/functions. Everything you need to construct a proper cfg!!
 
+;;; utilities
+;;; Given cfg, return all nodes which satisfy the predicate pred.
+(define (filter-nodes cfg pred)
+  (filter pred (graph-nodes (cfg:get-graph cfg))))
+
+;; Is node in nodes? return true if so, false otherwise.
+(define (in? node nodes)
+  ;;(pp `(,node 'in ,nodes))
+  (not (eq? (memq node nodes) #f)))
+
 ;;; Create a cfg object and return it.
 (define (create-cfg)
   (let ((cfg (create-graph)))
@@ -315,8 +325,14 @@
     (string-append "nd" (substring ns 7 (- (string-length ns) 1)))))
 
 (define (cfg->dot cfg)
-  (write-string "digraph {")
-  (newline)
+  (write-string "digraph {") (newline)
+  (write-string "subgraph {") (newline)
+  (write-string " rank=same; ")
+  (for-each (lambda (n)
+		    (write-string (node-string n))
+		    (write-string "; "))
+	    (filter-nodes cfg cfg:global-node?))
+  (write-string "}") (newline)
   (for-each (lambda (e)
 	      (let ((snode (edge-src-node e))
 		    (dnode (edge-dest-node e))
@@ -329,8 +345,7 @@
 	       ((function-def? etype) (write "red"))
 	       ((function-call? etype) (write "blue"))
 	       (else (write "yellow")))
-	      (write-string "];")
-	      (newline)))
+	      (write-string "];") (newline)))
 	    (get-edges (cfg:get-graph cfg)))
   (for-each (lambda (n)
 	      (write-string (node-string n))
@@ -343,8 +358,6 @@
 	       ((cfg:undefined-node? n) (write "doublecircle"))
 	       ((cfg:primitive-node? n) (write "diamond"))
 	       (else (write "ellipse")))
-	      (write-string "];")
-	      (newline))
+	      (write-string "];") (newline))
 	    (get-nodes (cfg:get-graph cfg)))
-  (write-string "}")
-  (newline))
+  (write-string "}") (newline))

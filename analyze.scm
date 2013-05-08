@@ -185,8 +185,8 @@
   (pp (cadr exp))
 
   (lambda (env)
-    (default-repl-eval (cadr exp) generic-evaluation-environment 'sussman-explain-me?)
-    (default-cell 'ok)))
+    (default-cell (default-repl-eval (cadr exp)
+		    generic-evaluation-environment 'sussman-explain-me?))))
 
 ; set hook repl eval to default repl eval
 ; call repl/eval with expression and generic-evaluation-environment

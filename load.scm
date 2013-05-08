@@ -10,9 +10,9 @@
 (load "utility")
 (load "graph")
 (load "cfg")
+(load "checker")
 
 (load "analyze" generic-evaluation-environment)
 (load "repl" generic-evaluation-environment)
 
 (ge generic-evaluation-environment)
-
