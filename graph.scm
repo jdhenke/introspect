@@ -90,6 +90,10 @@
 (define (get-nodes graph)
   (graph-nodes graph))
 
+;;; Returns all the edges in the graph
+(define (get-edges graph)
+  (append-map get-outgoing-edges (get-nodes graph)))
+
 ;;; Update
 
 ;;; set-node-data! and set-edge-data! are automagically created by scheme!
@@ -119,11 +123,8 @@
 
 ;;; Prints all nodes in a graph
 (define (pp-graph graph)
-  (define (loop first-node rest-nodes)
-    (if (null? rest-nodes)
-	(pp first-node)
-	(begin
-	  (pp first-node)
-	  (loop (car rest-nodes) (cdr rest-nodes)))))
-  (let ((nodes (get-nodes graph)))
-    (loop (car nodes) (cdr nodes))))
+  (define (pp-list l)
+    (if (not (null? l))
+	(begin (pp (car l)) (pp-list (cdr l)))))
+  (pp-list (get-nodes graph))
+  (pp-list (get-edges graph)))

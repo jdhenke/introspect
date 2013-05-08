@@ -281,3 +281,29 @@
 ;;; Print a cfg graph
 (define (pp-cfg graph)
   (pp-graph (cfg:get-graph graph)))
+
+
+(define (obj->string obj)
+  (with-output-to-string
+    (lambda () (write obj))))
+
+(define (node-string node)
+  (let ((ns (obj->string node)))
+    (string-append "nd" (substring ns 7 (- (string-length ns) 1)))))
+
+(define (cfg->dot cfg)
+  (write-string "digraph {")
+  (newline)
+  (for-each (lambda (e)
+	      (let ((snode (edge-src-node e))
+		    (dnode (edge-dest-node e)))
+	      (write-string (node-string snode))
+	      (write-string "->")
+	      (write-string (node-string dnode))
+	      (write-string " [label=")
+	      (write-string (obj->string (
+	      (write-string ";")
+	      (newline))
+	    (get-edges (cfg:get-graph cfg)))
+  (write-string "}")
+  (newline))
