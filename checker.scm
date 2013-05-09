@@ -21,7 +21,9 @@
 ;;; root node by following any edges.
 (define (find-dead-code cfg)
   (let ((alive-nodes (visit-nodes (cfg:get-root cfg) (lambda (n) #t)))) ;; visit all edges
-    (remove (lambda (n) (in? n alive-nodes)) (graph-nodes (cfg:get-graph cfg)))))
+    (remove (lambda (n)
+	      (or (in? n alive-nodes)
+		  (cfg:primitive-node? n))) (graph-nodes (cfg:get-graph cfg)))))
 
 ;;; Return list of any undefined procedures in the cfg. Returns an empty list if
 ;;; none are found. An undefined procedure is any procedure which is called from
@@ -45,9 +47,47 @@
 	   (lambda (n) (visit-nodes n (lambda (e) (function-call?
 						   (get-edge-data e)))))
 		   (filter-nodes cfg cfg:global-node?)))))
-    (pp called-nodes)
     (remove (lambda (n) (or (cfg:root-node? n) ;; don't return root node
 			    (cfg:global-node? n)
 			    (cfg:primitive-node? n)
 			    (in? n called-nodes)))
 	    (graph-nodes (cfg:get-graph cfg)))))
+
+(define (check-cfg cfg)
+  (let ((dead-nodes (find-dead-code cfg))
+	(undefined-nodes (find-undefined-procedures cfg))
+	(unused-nodes (find-unused-code cfg))
+	(problem #f))
+    (if (not (null? dead-nodes))
+	(begin
+	  (for-each (lambda (n)
+		      (write-line (string-append
+				   "function " (obj->string (cfg:node-name n))
+				   " is unreachable")))
+		    dead-nodes)
+	  (set! problem #t)))
+    (if (not (null? undefined-nodes))
+	(begin
+	  (for-each (lambda (n)
+		      (for-each (lambda (e)
+				  (write-line
+				   (string-append
+				    (obj->string (cfg:node-name (edge-src-node e)))
+				    " calls undefined function "
+				    (obj->string (cfg:node-name n)))))
+				(filter (lambda (e)
+					  (function-call? (get-edge-data e)))
+					(get-incoming-edges n))))
+		    undefined-nodes)
+	  (set! problem #t)))
+    (if (not (null? unused-nodes))
+	(begin
+	  (for-each (lambda (n)
+		      (write-line (string-append "function "
+						 (obj->string (cfg:node-name n))
+						 " is unused")))
+		    unused-nodes)
+	  (set! problem #t)))
+    (if (not problem)
+	(begin (write-string "No problems found.") (newline)))
+    (not problem)))

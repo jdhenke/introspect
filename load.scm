@@ -7,7 +7,6 @@
 (define generic-evaluation-environment
   (extend-top-level-environment user-initial-environment))
 
-(load "utility")
 (load "graph")
 (load "cfg")
 (load "checker")
