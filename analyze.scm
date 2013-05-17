@@ -72,18 +72,27 @@
     (pp "Adding edge to/from")
     (pp exp)
     (pp parent-node)
-    (if (rootnode? parent-node)
-	     (add-global-call *g* destination-name)
-	     (add-function-call *g* parent-node destination-name))
-    (let ((fproc (analyze (operator exp) parent-node))
+    (let ((edge (if (rootnode? parent-node)
+		    (add-global-call *g* destination-name)
+		    (add-function-call *g* parent-node destination-name)))
+	  (fproc (analyze (operator exp) parent-node))
 	  (aprocs (map analyze-tmp (operands exp))))
       (lambda (env)
-	(let ((proc-cell (fproc env)))
-	  (add-cell-tags!
-	   (execute-application
-	    proc-cell
-	    (map (lambda (aproc) (aproc env)) aprocs))
-	   (cell-tags proc-cell)))))))
+	(let ((return-value
+	       (let ((proc-cell (fproc env)))
+		 (add-cell-tags!
+		  (execute-application
+		   proc-cell
+		   (map (lambda (aproc) (aproc env)) aprocs))
+		  (cell-tags proc-cell)))))
+	  (begin
+	    (pp "Adding execution")
+	    (pp exp)
+	    (pp edge)
+	    (pp (operands exp))
+	    (pp return-value)
+	    (add-execution edge (operands exp) return-value)
+	    return-value))))))
 
 (define execute-application
   (make-generic-operator 2 'execute-application
