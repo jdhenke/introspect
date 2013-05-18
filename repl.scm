@@ -46,14 +46,15 @@
   (set! the-global-environment
 	(extend-environment '() '() the-empty-environment))
   (set! default-repl-eval hook/repl-eval)
-;;; Use our own eval and our own environment construct
-  (set! hook/repl-eval our-repl-eval)
+  (go)
 )
 
 (define (go)
   (set! hook/repl-eval our-repl-eval)
+  "entered SchLint"
 )
 
 (define (exit)
   (set! hook/repl-eval default-repl-eval)
+  "exited SchLint"
 )

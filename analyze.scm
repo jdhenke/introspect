@@ -5,6 +5,8 @@
 (define *g* (create-cfg))
 (define rootnode 'rootnode)
 (define (rootnode? r) (eq? r rootnode))
+(define (print-graph) (pp-cfg *g*))
+(define (draw-graph) (cfg->dot *g*))
 
 ;;; EVALUATION
 ;;; Takes place in two separate phases:
@@ -26,7 +28,7 @@
   (make-generic-operator 2 'analyze
     (lambda (exp parent-node)
       (cond ((application? exp)
-	     (analyze-application exp parent-node))
+	     (analyze-any-application exp parent-node))
 	    (else
 	     (error "Unknown expression type"
 		    exp))))))
@@ -64,9 +66,7 @@
 
 (defhandler analyze analyze-lambda lambda? any?)
 
-(define (analyze-application exp parent-node)
-  (define (analyze-tmp exp)
-    (analyze exp parent-node))
+(define (analyze-any-application exp parent-node)
   (let ((destination-name (operator exp)))
     ;; add a call edge
     (pp "Adding edge to/from")
@@ -75,15 +75,22 @@
     (if (rootnode? parent-node)
 	     (add-global-call *g* destination-name)
 	     (add-function-call *g* parent-node destination-name))
-    (let ((fproc (analyze (operator exp) parent-node))
-	  (aprocs (map analyze-tmp (operands exp))))
-      (lambda (env)
-	(let ((proc-cell (fproc env)))
-	  (add-cell-tags!
-	   (execute-application
-	    proc-cell
-	    (map (lambda (aproc) (aproc env)) aprocs))
-	   (cell-tags proc-cell)))))))
+    (analyze-application exp parent-node)))
+
+(define (analyze-application exp parent-node)
+  (define (analyze-tmp exp)
+    (analyze exp parent-node))
+  (let ((fproc (analyze (operator exp) parent-node))
+	(aprocs (map analyze-tmp (operands exp))))
+    (lambda (env)
+      (let ((proc-cell (fproc env)))
+	(add-cell-tags!
+	 (execute-application
+	  proc-cell
+	  (map (lambda (aproc) (aproc env)) aprocs))
+	 (cell-tags proc-cell))))))
+
+(defhandler analyze analyze-application escaped-apply? any?)
 
 (define execute-application
   (make-generic-operator 2 'execute-application
