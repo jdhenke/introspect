@@ -160,7 +160,7 @@
 ;;; Procedure applications -- NO-ARGS? and LAST-OPERAND? added
 
 ;;; Procedures we don't want to add to our graph
-(define escaped-procs '(exit pp-cfg print-graph draw-graph cfg->dot))
+(define escaped-procs '(exit go pp-cfg print-graph draw-graph cfg->dot))
 
 (define (escaped-apply? exp)
   (any (lambda (proc-name) (tagged-list? exp proc-name)) escaped-procs))
