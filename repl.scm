@@ -37,12 +37,23 @@
 
 (define the-global-environment 'not-initialized)
 
+(define default-repl-eval 'undefined)
+
+(define (our-repl-eval input default/env default/repl)
+  (cell-value (eval input the-global-environment)))
+
 (define (init)
   (set! the-global-environment
 	(extend-environment '() '() the-empty-environment))
-  (define default-repl-eval hook/repl-eval)
-
+  (set! default-repl-eval hook/repl-eval)
 ;;; Use our own eval and our own environment construct
-  (set! hook/repl-eval (lambda (input default/env default/repl)
-			 (cell-value (eval input the-global-environment))))
+  (set! hook/repl-eval our-repl-eval)
+)
+
+(define (go)
+  (set! hook/repl-eval our-repl-eval)
+)
+
+(define (exit)
+  (set! hook/repl-eval default-repl-eval)
 )

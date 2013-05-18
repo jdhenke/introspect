@@ -185,12 +185,14 @@
   (pp (cadr exp))
 
   (lambda (env)
-    (default-cell (default-repl-eval (cadr exp)
+    ;; set hook repl eval to default repl eval
+    ;; call repl/eval with expression and generic-evaluation-environment
+    ;; reset hook/repl-eval as in setup.scm
+    (set! hook/repl-eval default-repl-eval)
+    (let ((ret (default-cell (default-repl-eval (cadr exp)
 		    generic-evaluation-environment 'sussman-explain-me?))))
-
-; set hook repl eval to default repl eval
-; call repl/eval with expression and generic-evaluation-environment
-; reset hook/repl-eval as in setup.scm
+      (set! hook/repl-eval our-repl-eval)
+      ret)))
 
 (defhandler analyze analyze-ignore
   (lambda (exp)
