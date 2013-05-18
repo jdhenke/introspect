@@ -63,20 +63,15 @@
 (define (analyze-any-application exp parent-node)
   (let ((destination-name (operator exp)))
     ;; add a call edge
-    (pp "Adding edge to/from")
-    (pp exp)
-    (pp parent-node)
+    (if *verbose* (begin (pp "Adding edge to/from") (pp exp) (pp parent-node)))
     (let ((edge (if (rootnode? parent-node)
 		    (add-global-call *g* destination-name)
 		    (add-function-call *g* parent-node destination-name)))
 	  (combinator (analyze-application exp parent-node)))
       (lambda (env)
 	(let ((return-value (combinator env)))
-	  (pp "Adding execution")
-	  (pp exp)
-	  (pp edge)
-	  (pp (operands exp))
-	  (pp return-value)
+	  (if *verbose* (begin (pp "Adding execution") (pp exp) (pp edge)
+			       (pp (operands exp)) (pp return-value)))
 	  (add-execution edge (operands exp) return-value)
 	  return-value)))))
 
@@ -169,8 +164,7 @@
 ;;; Special forms to get tags
 (define (analyze-get-tags exp parent-node)
   (begin
-    (pp "analyze-get-tags")
-    (pp exp)
+    (if *verbose* (begin (pp "analyze-get-tags") (pp exp)))
     (let ((var-obj (analyze (tag-var exp) parent-node)))
       (lambda (env)
 	(let ((cell (var-obj env)))
@@ -178,8 +172,7 @@
 
 (define (analyze-add-tag exp parent-node)
   (begin
-    (pp "analyze-add-tag")
-    (pp exp)
+    (if *verbose* (begin (pp "analyze-add-tag") (pp exp)))
     (let ((aobj (analyze (tag-var exp) parent-node))
 	  (atag (analyze (tag-tag exp) parent-node)))
       (lambda (env)
@@ -192,8 +185,6 @@
 (defhandler analyze analyze-add-tag add-tag? any?)
 
 (define (analyze-ignore exp parent-node)
-  (pp (cadr exp))
-
   (lambda (env)
     ;; set hook repl eval to default repl eval
     ;; call repl/eval with expression and generic-evaluation-environment
