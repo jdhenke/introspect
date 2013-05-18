@@ -218,7 +218,7 @@
 
 (define (cfg:find-primitive-function cfg f)
   (define (assigned-and-bound? symb)
-    (eq? 'normal (environment-reference-type system-global-environment symb)))
+    (eq? 'normal (environment-reference-type generic-evaluation-environment symb)))
   (define (filter-for-node nodes)
     (find (lambda (n)
 	    (eq? (cfg:node-name n) f))

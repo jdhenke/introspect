@@ -2,12 +2,6 @@
 ;;;   Generic analysis, but not prepared for
 ;;;   extension to handle nonstrict operands.
 
-(define *g* (create-cfg))
-(define rootnode 'rootnode)
-(define (rootnode? r) (eq? r rootnode))
-(define (print-graph) (pp-cfg *g*))
-(define (draw-graph) (cfg->dot *g*))
-
 ;;; EVALUATION
 ;;; Takes place in two separate phases:
 ;;;   1) analyze compiles the expression into a combinator

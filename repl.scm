@@ -45,6 +45,7 @@
 (define (init)
   (set! the-global-environment
 	(extend-environment '() '() the-empty-environment))
+  (reset-cfg)
   ;;; Only run once! Otherwise we risk losing our reference to initial repl!
   (if (eq? default-repl-eval 'undefined)
       (set! default-repl-eval hook/repl-eval))
