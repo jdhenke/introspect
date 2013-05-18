@@ -171,17 +171,17 @@
   (begin
     (pp "analyze-get-tags")
     (pp exp)
-    (let ((var-exp (tag-var exp)))
+    (let ((var-obj (analyze (tag-var exp) parent-node)))
       (lambda (env)
-	(let ((cell ((analyze var-exp) env)))
+	(let ((cell (var-obj env)))
 	  (make-cell (cell-tags cell) (cell-tags cell)))))))
 
 (define (analyze-add-tag exp parent-node)
   (begin
     (pp "analyze-add-tag")
     (pp exp)
-    (let ((aobj (analyze (tag-var exp)))
-	  (atag (analyze (tag-tag exp))))
+    (let ((aobj (analyze (tag-var exp) parent-node))
+	  (atag (analyze (tag-tag exp) parent-node)))
       (lambda (env)
 	(let* ((cell (aobj env))
 	       (tag-cell (atag env))
