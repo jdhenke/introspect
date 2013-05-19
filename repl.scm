@@ -40,7 +40,7 @@
 (define default-repl-eval 'undefined)
 
 (define (our-repl-eval input default/env default/repl)
-  (cell-value (eval input the-global-environment)))
+  (cell-value (eval input the-global-environment #f)))
 
 (define (init)
   (set! the-global-environment

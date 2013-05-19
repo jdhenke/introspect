@@ -1,6 +1,7 @@
 ;;; Small file defining the "proper" api for SchLint
 
 (define *g* (create-cfg))
+(define *pending-tags* '())
 (define rootnode 'rootnode)
 (define (rootnode? r) (eq? r rootnode))
 (define *verbose* #f)
@@ -24,3 +25,10 @@
 (define (add-cell-tags! cell tags)
   (for-each (lambda (tag) (add-cell-tag! cell tag)) tags)
   cell)
+
+(define (apply-tags return)
+  (define (loop)
+    (if (not (empty-queue? *pending-tags*))
+	(begin (add-cell-tags! return (dequeue *pending-tags*))
+	       (loop))))
+  (loop))
