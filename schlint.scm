@@ -9,6 +9,7 @@
 (define (print-cfg) (pp-cfg *g*))
 (define (draw-cfg) (cfg->dot *g*))
 (define (reset-cfg) (set! *g* (create-cfg)))
+(define clear-cfg reset-cfg)
 
 (define escaped-procs '(exit go pp-cfg print-cfg draw-cfg cfg->dot reset-cfg))
 

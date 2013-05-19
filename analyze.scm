@@ -160,12 +160,17 @@
 (defhandler analyze analyze-assignment assignment? any?)
 
 (define (analyze-definition exp parent-node)
-  (let ((this-node
-	 (if (rootnode? parent-node)
-	     (define-global-func *g* (definition-variable exp))
-	     (define-sub-function *g* parent-node (definition-variable exp)))))
-    (let ((var (definition-variable exp))
-	  (vproc (analyze (definition-value exp) this-node)))
+  (let ((var (definition-variable exp))
+	(value (definition-value exp))
+	(parent-node parent-node))
+    (if (lambda? value)
+	;; Defining a procedure
+	(if (rootnode? parent-node)
+	    (set! parent-node (define-global-func *g*
+				(definition-variable exp)))
+	    (set! parent-node (define-sub-function *g* parent-node
+				(definition-variable exp)))))
+    (let ((vproc (analyze value parent-node)))
       (lambda (env tail?)
 	(let ((cell (vproc env #f)))
 	  (define-variable! var cell env)
