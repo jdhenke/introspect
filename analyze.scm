@@ -11,8 +11,8 @@
 ;;;   env - environment in which to execute this
 ;;;   tail? - boolean value if the expression being evaluated is in tail position.
 ;;;   returns - cell of answer
-(define (eval exp env)
-  ((analyze exp rootnode) env))
+(define (eval exp env tail?)
+  ((analyze exp rootnode) env tail?))
 
 ;;; ANALYZE
 ;;; A function which, when given an expression returns a combinator
@@ -93,7 +93,7 @@
       (let* ((proc-cell (fproc env #f))
 	     (proc-tags (cell-tags proc-cell)))
 	(if tail?
-	    (begin (enqueue proc-tags)
+	    (begin (enqueue *pending-tags* proc-tags)
 		   (execute-application
 		    proc-cell
 		    (map (lambda (aproc) (aproc env #f)) aprocs) #t))
