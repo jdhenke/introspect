@@ -114,7 +114,7 @@
      ;; a new node for the new definition.
      (else
       (begin (assert (= (length nodes) 1) "should only find at most 1 previous function definition")
-	     (pp `("replacing definition for " ,(cfg:node-name (car nodes))))
+	     ;;(pp `("replacing definition for " ,(cfg:node-name (car nodes))))
 	     (let ((def-edge (find (lambda (e)
 				     (and (function-def? (get-edge-data e))
 					  (eq? (edge-dest-node e) (car nodes))))
@@ -269,7 +269,7 @@
 (define (define-global-func cfg f)
   (let* ((root (cfg:get-root cfg))
 	(func (cfg:add-function cfg root *global* f)))
-    (pp `("add definition from " ,root " to " ,func))
+    ;;(pp `("add definition from " ,root " to " ,func))
     (cfg:add-define-edge root func)
     func))
 
@@ -279,7 +279,7 @@
 ;;; 'sub-f'. Return the node of the sub-function.
 (define (define-sub-function cfg parent sub-f)
   (let ((sub-f (cfg:add-function cfg parent *normal* sub-f)))
-    (pp `("add definition from " ,parent " to " ,sub-f))
+    ;;(pp `("add definition from " ,parent " to " ,sub-f))
     (cfg:add-define-edge parent sub-f)
     sub-f))
 
@@ -296,7 +296,7 @@
 	(begin (set! ce-f (cfg:find-primitive-function cfg callee))
 	       (if (eq? ce-f #f) ; callee not defined, add place holder
 		   (set! ce-f (cfg:add-undefined-function cfg caller callee)))))
-    (pp `("add function call from " ,caller " to " ,ce-f))
+    ;;(pp `("add function call from " ,caller " to " ,ce-f))
     (cfg:add-call-edge caller ce-f)))
 
 ;;; Handle special case of calling global function.

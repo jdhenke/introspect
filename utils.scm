@@ -2,11 +2,9 @@
 
 (declare (usual-integrations))
 
-
 (define (identity x) x)
 
 (define (any? x) #t)
-
 
 (define ((compose f g) x) (f (g x)))
 
@@ -33,3 +31,14 @@
 (define (obj->string obj)
   (with-output-to-string
     (lambda () (write obj))))
+
+(define (empty-queue? q)
+  (null? q))
+
+(define (enqueue x q)
+  (set! q (append q (list x))))
+
+(define (dequeue)
+  (let ((x (car q)))
+    (set! q (cdr q))
+    x))
