@@ -215,9 +215,6 @@
 
 (define (analyze-ignore exp parent-node)
   (lambda (env tail?)
-    ;; set hook repl eval to default repl eval
-    ;; call repl/eval with expression and generic-evaluation-environment
-    ;; reset hook/repl-eval as in setup.scm
     (set! hook/repl-eval default-repl-eval)
     (let ((ret (default-cell (default-repl-eval (cadr exp)
 		    generic-evaluation-environment 'sussman-explain-me?))))
