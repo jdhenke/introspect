@@ -40,6 +40,9 @@
 (define default-repl-eval 'undefined)
 
 (define (our-repl-eval input default/env default/repl)
+  ;;; Technically nothing at the top level is never a site of tail-recursion,
+  ;;; but with the way the repl is configured, the evaluation by eval is in tail
+  ;;; position.
   (cell-value (eval input the-global-environment #t)))
 
 (define (init)
