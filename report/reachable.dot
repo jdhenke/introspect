@@ -1,5 +1,6 @@
 digraph {
 
+a->b2
 a->b
 a->c
 c->k
@@ -10,8 +11,11 @@ e->g
 f->h
 f->i
 g->j
+d->l
+i->m
 
 f [shape="box", color="blue", penwidth=2.0]
+b2 [label="a", color="green", penwidth=2.0]
 h [color="green", penwidth=2.0]
 i [color="green", penwidth=2.0]
 g [color="green", penwidth=2.0]
@@ -22,5 +26,7 @@ a [label="*root*"]
 c [color="green", penwidth=2.0]
 j [color="red", penwidth=2.0]
 k [color="red", penwidth=2.0]
+l [color="red", penwidth=2.0]
+m [color="red", penwidth=2.0]
 
 }
