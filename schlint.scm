@@ -8,6 +8,7 @@
 (define *verbose* #f)
 ;;; global list of tags to be applied before returning from a tail recursion
 (define *pending-tags* '())
+(define *pending-execs* '())
 
 ;;; Some functions should never be recorded in the cfg, it just doesn't make sense.
 (define escaped-procs '(exit go pp-cfg print-cfg draw-cfg cfg->dot reset-cfg load))
@@ -33,6 +34,18 @@
 	(begin (add-cell-tags! return (dequeue *pending-tags*))
 	       (loop))))
   (loop))
+
+(define (apply-executions return)
+  (define (loop)
+    (if (not (empty-queue? *pending-execs*))
+	(let ((edge-pair (dequeue *pending-execs)))
+	  (add-execution (car edge-pair) (cadr edge-pair) return)
+	  (loop))))
+  (loop))
+
+(define (apply-delayed-work return-value)
+  (apply-tags return-value)
+  (apply-executions return-value))
 
 ;;; Public API
 

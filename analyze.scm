@@ -31,7 +31,7 @@
 (define (analyze-self-evaluating exp parent-node)
   (let ((return (default-cell exp)))
     (lambda (env tail?)
-      (if tail? (apply-tags return))
+      (if tail? (apply-delayed-work return))
       return)))
 
 (defhandler analyze analyze-self-evaluating self-evaluating? any?)
@@ -39,7 +39,7 @@
 (define (analyze-quoted exp parent-node)
   (let ((qval (default-cell (text-of-quotation exp))))
     (lambda (env tail?)
-      (if tail? (apply-tags qval))
+      (if tail? (apply-delayed-work qval))
       qval)))
 
 (defhandler analyze analyze-quoted quoted? any?)
@@ -47,7 +47,7 @@
 (define (analyze-variable exp parent-node)
   (lambda (env tail?)
     (let ((return (get-variable-cell exp env)))
-      (if tail? (apply-tags return))
+      (if tail? (apply-delayed-work return))
       return)))
 
 (defhandler analyze analyze-variable variable? any?)
@@ -78,11 +78,14 @@
 		    (add-function-call *g* parent-node destination-name)))
 	  (combinator (analyze-application exp parent-node)))
       (lambda (env tail?)
-	(let ((return-value (combinator env tail?)))
-	  (if *verbose* (begin (pp "Adding execution") (pp exp) (pp edge)
-			       (pp (operands exp)) (pp return-value)))
-	  (add-execution edge (operands exp) return-value)
-	  return-value)))))
+	(if tail?
+	    (begin (enqueue *pending-execs* (list edge (operands exp)))
+		   (combinator env tail?))
+	    (let ((return-value (combinator env tail?)))
+	      (if *verbose* (begin (pp "Adding execution") (pp exp) (pp edge)
+				   (pp (operands exp)) (pp return-value)))
+	      (add-execution edge (operands exp) return-value)
+	      return-value))))))
 
 (define (analyze-application exp parent-node)
   (define (analyze-tmp exp)
@@ -124,7 +127,7 @@
 (defhandler execute-application
   (lambda (proc-cell args-cells tail?)
     (let ((return (apply-primitive-procedure proc-cell args-cells)))
-      (if tail? (apply-tags return))
+      (if tail? (apply-delayed-work return))
       return))
   strict-primitive-procedure?)
 
@@ -194,7 +197,7 @@
       (lambda (env tail?)
 	(let* ((cell (var-obj env #f))
 	       (return (make-cell (cell-tags cell) (cell-tags cell))))
-	  (if tail? (apply-tags return))
+	  (if tail? (apply-delayed-work return))
 	  return)))))
 
 (define (analyze-add-tag exp parent-node)
@@ -207,7 +210,7 @@
 	       (tag-cell (atag env #f))
 	       (tag (cell-value tag-cell))
 	       (return (add-cell-tag! cell tag)))
-	  (if tail? (apply-tags return))
+	  (if tail? (apply-delayed-work return))
 	  return)))))
 
 (defhandler analyze analyze-get-tags get-tags? any?)
@@ -219,7 +222,7 @@
     (let ((ret (default-cell (default-repl-eval (cadr exp)
 		    generic-evaluation-environment 'sussman-explain-me?))))
       (set! hook/repl-eval our-repl-eval)
-      (if tail? (apply-tags ret))
+      (if tail? (apply-delayed-work ret))
       ret)))
 
 (defhandler analyze analyze-ignore
