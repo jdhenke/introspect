@@ -1,6 +1,3 @@
-;(load "cfg.scm")
-;(load "utility.scm")
-
 ;;; Unit testing
 (define *g* (create-cfg))
 (assert (cfg? *g*))

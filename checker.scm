@@ -1,5 +1,3 @@
-
-
 ;;; search depth first starting from the start node. Pred is a predicate mapping
 ;;; from edge to a boolean value, indicating whether to traverse it or not.
 (define (visit-nodes start pred)
