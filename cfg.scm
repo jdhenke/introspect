@@ -18,7 +18,7 @@
 ;; descriptor type indicator
 (define *desc* '*desc*)
 ;; function types
-(define *root* 'root) ;uniqe type for the non-existant node used to unite all
+(define *root* '*root*) ;uniqe type for the non-existant node used to unite all
 		      ;global/source nodes into a peer-group
 (define *global* 'global)
 (define *normal* 'non-global)
@@ -342,7 +342,7 @@
 		  (cond
 		   ((function-def? etype) (write "red"))
 		   ((function-call? etype) (write "blue"))
-		   (else (write "yellow")))
+		   (else (write "green")))
 		  (write-string "];") (newline)))
 	      (get-edges (cfg:get-graph cfg)))
     (for-each (lambda (n)
@@ -351,7 +351,7 @@
 		(write (obj->string (cfg:node-name n)))
 		(write-string ", shape=")
 		(cond
-		 ((cfg:root-node? n) (write "point"))
+		 ;((cfg:root-node? n) (write "point"))
 		 ((cfg:global-node? n) (write "box"))
 		 ((cfg:undefined-node? n) (write "doublecircle"))
 		 ((cfg:primitive-node? n) (write "diamond"))

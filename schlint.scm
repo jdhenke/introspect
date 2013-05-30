@@ -62,3 +62,5 @@
 ;;; reset the cfg to a blank state. clear is just an alias.
 (define (reset-cfg) (set! *g* (create-cfg)))
 (define clear-cfg reset-cfg)
+
+(define (check-cfg) (analyze-cfg *g*))

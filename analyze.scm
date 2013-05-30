@@ -137,7 +137,7 @@
   (define (loop first-proc rest-procs)
     (cond ((null? rest-procs) first-proc)
 	  ((= 1 (length rest-procs))
-	   (lambda (env tail?) (proc1 env #f) ((car rest-procs) env #t)))
+	   (lambda (env tail?) (first-proc env #f) ((car rest-procs) env #t)))
 	  (else (loop (sequentially first-proc (car rest-procs))
 		      (cdr rest-procs)))))
   (if (null? exps) (error "Empty sequence"))

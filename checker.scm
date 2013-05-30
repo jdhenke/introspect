@@ -53,7 +53,7 @@
 			    (in? n called-nodes)))
 	    (graph-nodes (cfg:get-graph cfg)))))
 
-(define (check-cfg cfg)
+(define (analyze-cfg cfg)
   (let ((dead-nodes (find-dead-code cfg))
 	(undefined-nodes (find-undefined-procedures cfg))
 	(unused-nodes (find-unused-code cfg))
